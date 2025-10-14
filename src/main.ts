@@ -1,6 +1,7 @@
-import { Renderer } from "./Renderer";
+import { Engine } from "./core/engine";
 
 const canvas = document.getElementById("GLCanvas") as HTMLCanvasElement
+const engine = Engine.getSingleton()
 
-const render = new Renderer(canvas)
-render.init()
+await engine.init(canvas)
+engine.loop()
