@@ -1,72 +1,227 @@
-import vertexWGSL from "../shaders/vertex.wgsl?raw";
-import fragmentWGSL from "../shaders/fragment.wgsl?raw";
+import vertexWGSL from "../shaders/vertex.wgsl?raw"
+import fragmentWGSL from "../shaders/fragment.wgsl?raw"
 
-export class Engine {
-    private static instance: Engine
-    private device!: GPUDevice
-    private context!: GPUCanvasContext
-    private pipeline!: GPURenderPipeline
+let canvas: HTMLCanvasElement
+let device: GPUDevice
+let context: GPUCanvasContext
+let format: GPUTextureFormat
+let pipeline: GPURenderPipeline
+let depthTexture: GPUTexture
 
-    private constructor() {
-    }
+let vertexBuffer: GPUBuffer
+let indexBuffer: GPUBuffer
+let uniformBuffer: GPUBuffer
+let uniformBindGroup: GPUBindGroup
+let startTime = performance.now()
 
-    static getSingleton(): Engine {
-        this.instance = this.instance || new Engine();
+const cubeVertices = new Float32Array([
+    -1, -1, 1, 0, 0, 1, 0, 0,
+    1, -1, 1, 0, 0, 1, 1, 0,
+    1, 1, 1, 0, 0, 1, 1, 1,
+    -1, 1, 1, 0, 0, 1, 0, 1,
 
-        return this.instance;
-    }
+    1, -1, -1, 0, 0, -1, 0, 0,
+    -1, -1, -1, 0, 0, -1, 1, 0,
+    -1, 1, -1, 0, 0, -1, 1, 1,
+    1, 1, -1, 0, 0, -1, 0, 1,
 
-    public async init(canvas: HTMLCanvasElement) {
-        const adapter = await navigator.gpu?.requestAdapter()
-        const device = await adapter?.requestDevice()
-        if (!device)
-            throw new Error("Browser does not support WebGPU")
+    -1, 1, 1, 0, 1, 0, 0, 0,
+    1, 1, 1, 0, 1, 0, 1, 0,
+    1, 1, -1, 0, 1, 0, 1, 1,
+    -1, 1, -1, 0, 1, 0, 0, 1,
 
-        const context = canvas.getContext("webgpu")
-        const format = navigator.gpu.getPreferredCanvasFormat();
-        if (!context)
-            throw new Error("Failed to get canvas context")
+    -1, -1, -1, 0, -1, 0, 0, 0,
+    1, -1, -1, 0, -1, 0, 1, 0,
+    1, -1, 1, 0, -1, 0, 1, 1,
+    -1, -1, 1, 0, -1, 0, 0, 1,
 
-        context.configure({
-            device: device,
-            format: format
-        })
+    1, -1, 1, 1, 0, 0, 0, 0,
+    1, -1, -1, 1, 0, 0, 1, 0,
+    1, 1, -1, 1, 0, 0, 1, 1,
+    1, 1, 1, 1, 0, 0, 0, 1,
 
-        const pipeline = device.createRenderPipeline({
-            layout: "auto",
-            vertex: {
-                module: device.createShaderModule({ code: vertexWGSL }),
-                entryPoint: "main",
-            },
-            fragment: {
-                module: device.createShaderModule({ code: fragmentWGSL }),
-                entryPoint: "main",
-                targets: [{ format }],
-            },
-            primitive: { topology: "triangle-list" },
-        });
+    -1, -1, -1, -1, 0, 0, 0, 0,
+    -1, -1, 1, -1, 0, 0, 1, 0,
+    -1, 1, 1, -1, 0, 0, 1, 1,
+    -1, 1, -1, -1, 0, 0, 0, 1,
+]);
 
-        this.device = device
-        this.context = context
-        this.pipeline = pipeline
-    }
+const cubeIndices = new Uint16Array([
+    0, 1, 2, 2, 3, 0,
+    4, 5, 6, 6, 7, 4,
+    8, 9, 10, 10, 11, 8,
+    12, 13, 14, 14, 15, 12,
+    16, 17, 18, 18, 19, 16,
+    20, 21, 22, 22, 23, 20,
+]);
 
-    public loop() {
-        const encoder = this.device.createCommandEncoder();
-        const pass = encoder.beginRenderPass({
-            colorAttachments: [{
-                view: this.context.getCurrentTexture().createView(),
-                clearValue: { r: 0.5, g: 0.05, b: 0.08, a: 1 },
-                loadOp: "clear",
-                storeOp: "store",
-            }],
-        });
+export async function init() {
+    canvas = document.getElementById("GLCanvas") as HTMLCanvasElement
+    const adapter = await navigator.gpu?.requestAdapter()
+    if (!adapter)
+        throw new Error("Browser does not support WebGPU")
 
-        pass.setPipeline(this.pipeline);
-        pass.draw(3);
-        pass.end();
-        this.device.queue.submit([encoder.finish()]);
+    device = await adapter?.requestDevice()
+    if (!device)
+        throw new Error("Browser does not support WebGPU")
 
-        requestAnimationFrame(() => this.loop())
-    }
+    context = canvas.getContext("webgpu")!
+    if (!context)
+        throw new Error("Failed to get canvas context")
+
+    const devicePixelRatio = window.devicePixelRatio || 1;
+
+    canvas.width = canvas.clientWidth * devicePixelRatio;
+    canvas.height = canvas.clientHeight * devicePixelRatio;
+
+    format = navigator.gpu.getPreferredCanvasFormat();
+    context.configure({
+        device: device,
+        format: format
+    })
+
+    depthTexture = device.createTexture({
+        size: [canvas.width, canvas.height],
+        format: 'depth24plus',
+        usage: GPUTextureUsage.RENDER_ATTACHMENT,
+    });
+
+    vertexBuffer = device.createBuffer({
+        size: cubeVertices.byteLength,
+        usage: GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_DST,
+        mappedAtCreation: true,
+    });
+    new Float32Array(vertexBuffer.getMappedRange()).set(cubeVertices);
+    vertexBuffer.unmap();
+
+    indexBuffer = device.createBuffer({
+        size: cubeIndices.byteLength,
+        usage: GPUBufferUsage.INDEX | GPUBufferUsage.COPY_DST,
+        mappedAtCreation: true,
+    });
+    new Uint16Array(indexBuffer.getMappedRange()).set(cubeIndices);
+    indexBuffer.unmap();
+
+    uniformBuffer = device.createBuffer({
+        size: 256,
+        usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
+    });
+
+    pipeline = device.createRenderPipeline({
+        layout: "auto",
+        vertex: {
+            module: device.createShaderModule({ code: vertexWGSL }),
+            entryPoint: "main",
+            buffers: [
+                {
+                    arrayStride: 8 * 4,
+                    attributes: [
+                        { shaderLocation: 0, offset: 0, format: "float32x3" },
+                        { shaderLocation: 1, offset: 12, format: "float32x3" },
+                        { shaderLocation: 2, offset: 24, format: "float32x2" },
+                    ],
+                },
+            ],
+        },
+        fragment: {
+            module: device.createShaderModule({ code: fragmentWGSL }),
+            entryPoint: "main",
+            targets: [{ format }],
+        },
+        primitive: { topology: "triangle-list", cullMode: "back" },
+        depthStencil: {
+            format: "depth24plus",
+            depthWriteEnabled: true,
+            depthCompare: "less",
+        },
+    });
+
+    uniformBindGroup = device.createBindGroup({
+        layout: pipeline.getBindGroupLayout(0),
+        entries: [{ binding: 0, resource: { buffer: uniformBuffer } }],
+    });
+}
+
+export function loop() {
+    const now = (performance.now() - startTime) / 1000;
+
+    const aspect = 800.0 / 600.0;
+    const fov = Math.PI / 2;
+    const near = 0.1;
+    const far = 100;
+    const proj = mat4_perspective(fov, aspect, near, far);
+    const view = mat4_lookAt([3, 3, 3], [0, 0, 0], [0, 1, 0]);
+    const model = mat4_rotationY(now);
+
+    device.queue.writeBuffer(uniformBuffer, 0, new Float32Array(model));
+    device.queue.writeBuffer(uniformBuffer, 64, new Float32Array(view));
+    device.queue.writeBuffer(uniformBuffer, 128, new Float32Array(proj));
+
+    const encoder = device.createCommandEncoder();
+    const pass = encoder.beginRenderPass({
+        colorAttachments: [{
+            view: context.getCurrentTexture().createView(),
+            clearValue: { r: 0.0, g: 0.0, b: 0.0, a: 1 },
+            loadOp: "clear",
+            storeOp: "store",
+        }],
+        depthStencilAttachment: {
+            view: depthTexture.createView(),
+            depthClearValue: 1.0,
+            depthLoadOp: 'clear',
+            depthStoreOp: 'store',
+        },
+    });
+
+    pass.setPipeline(pipeline);
+    pass.setVertexBuffer(0, vertexBuffer);
+    pass.setIndexBuffer(indexBuffer, "uint16");
+    pass.setBindGroup(0, uniformBindGroup);
+    pass.drawIndexed(cubeIndices.length);
+    pass.end();
+    device.queue.submit([encoder.finish()])
+
+    requestAnimationFrame(loop)
+}
+
+function mat4_perspective(fov: number, aspect: number, near: number, far: number): Float32Array {
+    const f = 1.0 / Math.tan(fov / 2);
+    const nf = 1 / (near - far);
+    return new Float32Array([
+        f / aspect, 0, 0, 0,
+        0, f, 0, 0,
+        0, 0, (far + near) * nf, -1,
+        0, 0, 2 * far * near * nf, 0,
+    ]);
+}
+
+function mat4_lookAt(eye: number[], center: number[], up: number[]): Float32Array {
+    const [ex, ey, ez] = eye;
+    const [cx, cy, cz] = center;
+    const [ux, uy, uz] = up;
+    let zx = ex - cx, zy = ey - cy, zz = ez - cz;
+    const zlen = Math.hypot(zx, zy, zz); zx /= zlen; zy /= zlen; zz /= zlen;
+    let xx = uy * zz - uz * zy, xy = uz * zx - ux * zz, xz = ux * zy - uy * zx;
+    const xlen = Math.hypot(xx, xy, xz); xx /= xlen; xy /= xlen; xz /= xlen;
+    const yx = zy * xz - zz * xy, yy = zz * xx - zx * xz, yz = zx * xy - zy * xx;
+    return new Float32Array([
+        xx, yx, zx, 0,
+        xy, yy, zy, 0,
+        xz, yz, zz, 0,
+        -(xx * ex + xy * ey + xz * ez),
+        -(yx * ex + yy * ey + yz * ez),
+        -(zx * ex + zy * ey + zz * ez),
+        1,
+    ]);
+}
+
+function mat4_rotationY(angle: number): Float32Array {
+    const c = Math.cos(angle);
+    const s = Math.sin(angle);
+    return new Float32Array([
+        c, 0, s, 0,
+        0, 1, 0, 0,
+        -s, 0, c, 0,
+        0, 0, 0, 1,
+    ]);
 }
