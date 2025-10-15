@@ -19,7 +19,7 @@ let texture: GPUTexture;
 let sampler: GPUSampler;
 let textureBindGroup: GPUBindGroup;
 
-const sphere = Geometry.generateSphere(1, 64, 64);
+const sphere = Geometry.generateSphere();
 
 const vertices = sphere.vertices;
 const indices = sphere.indices;
@@ -132,7 +132,7 @@ export async function init() {
             entryPoint: "main",
             targets: [{ format }],
         },
-        primitive: { topology: "triangle-list", cullMode: "back" },
+        primitive: { topology: "triangle-list", cullMode: "front" },
         depthStencil: {
             format: "depth24plus",
             depthWriteEnabled: true,
@@ -163,7 +163,7 @@ export function loop() {
     const far = 100;
     const proj = mat4_perspective(fov, aspect, near, far);
     const view = mat4_lookAt([1.5, 0, 1.5], [0, 0, 0], [0, 1, 0]);
-    const model = mat4_rotationY(now);
+    const model = mat4_rotationY(now * 0.5);
 
     device.queue.writeBuffer(uniformBuffer, 0, new Float32Array(model));
     device.queue.writeBuffer(uniformBuffer, 64, new Float32Array(view));

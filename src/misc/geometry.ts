@@ -1,10 +1,10 @@
-export type SphereMesh = {
+export type Mesh = {
     vertices: Float32Array;
     indices: Uint32Array;
     vertexStride: number;
 };
 
-export function generateSphere(radius = 1, latSegments = 32, lonSegments = 32): SphereMesh {
+export function generateSphere(radius = 1, latSegments = 32, lonSegments = 32): Mesh {
     const vertexStride = 8;
     const vertices: number[] = [];
     const indices: number[] = [];
@@ -47,5 +47,52 @@ export function generateSphere(radius = 1, latSegments = 32, lonSegments = 32): 
         vertices: new Float32Array(vertices),
         indices: new Uint32Array(indices),
         vertexStride: vertexStride * 4,
+    };
+}
+
+export function makeCube(size = 1): Mesh {
+    const hs = size / 2; // half-size
+    const vertices: number[] = [];
+    const indices: number[] = [];
+
+    // Cube faces: +X, -X, +Y, -Y, +Z, -Z
+    const faceData: { normal: number[]; corners: number[][]; }[] = [
+        { normal: [1, 0, 0], corners: [[hs, -hs, -hs], [hs, -hs, hs], [hs, hs, hs], [hs, hs, -hs]] },
+        { normal: [-1, 0, 0], corners: [[-hs, -hs, hs], [-hs, -hs, -hs], [-hs, hs, -hs], [-hs, hs, hs]] },
+        { normal: [0, 1, 0], corners: [[-hs, hs, -hs], [hs, hs, -hs], [hs, hs, hs], [-hs, hs, hs]] },
+        { normal: [0, -1, 0], corners: [[-hs, -hs, hs], [hs, -hs, hs], [hs, -hs, -hs], [-hs, -hs, -hs]] },
+        { normal: [0, 0, 1], corners: [[hs, -hs, hs], [-hs, -hs, hs], [-hs, hs, hs], [hs, hs, hs]] },
+        { normal: [0, 0, -1], corners: [[-hs, -hs, -hs], [hs, -hs, -hs], [hs, hs, -hs], [-hs, hs, -hs]] },
+    ];
+
+    let vertOffset = 0;
+    for (const face of faceData) {
+        const [nx, ny, nz] = face.normal;
+        const uvCorners = [
+            [0, 0],
+            [1, 0],
+            [1, 1],
+            [0, 1],
+        ];
+
+        for (let i = 0; i < 4; i++) {
+            const [x, y, z] = face.corners[i];
+            const [u, v] = uvCorners[i];
+            vertices.push(x, y, z, nx, ny, nz, u, v);
+        }
+
+        // Two triangles per face
+        indices.push(
+            vertOffset, vertOffset + 1, vertOffset + 2,
+            vertOffset, vertOffset + 2, vertOffset + 3
+        );
+
+        vertOffset += 4;
+    }
+
+    return {
+        vertices: new Float32Array(vertices),
+        indices: new Uint32Array(indices),
+        vertexStride: 8 * 4, // 8 floats * 4 bytes
     };
 }
