@@ -1,5 +1,6 @@
 import vertexWGSL from "../shaders/vertex.wgsl?raw"
 import fragmentWGSL from "../shaders/fragment.wgsl?raw"
+import * as Geometry from "../misc/geometry"
 
 let canvas: HTMLCanvasElement
 let device: GPUDevice
@@ -14,46 +15,10 @@ let uniformBuffer: GPUBuffer
 let uniformBindGroup: GPUBindGroup
 let startTime = performance.now()
 
-const cubeVertices = new Float32Array([
-    -1, -1, 1, 0, 0, 1, 0, 0,
-    1, -1, 1, 0, 0, 1, 1, 0,
-    1, 1, 1, 0, 0, 1, 1, 1,
-    -1, 1, 1, 0, 0, 1, 0, 1,
+const sphere = Geometry.generateSphere();
 
-    1, -1, -1, 0, 0, -1, 0, 0,
-    -1, -1, -1, 0, 0, -1, 1, 0,
-    -1, 1, -1, 0, 0, -1, 1, 1,
-    1, 1, -1, 0, 0, -1, 0, 1,
-
-    -1, 1, 1, 0, 1, 0, 0, 0,
-    1, 1, 1, 0, 1, 0, 1, 0,
-    1, 1, -1, 0, 1, 0, 1, 1,
-    -1, 1, -1, 0, 1, 0, 0, 1,
-
-    -1, -1, -1, 0, -1, 0, 0, 0,
-    1, -1, -1, 0, -1, 0, 1, 0,
-    1, -1, 1, 0, -1, 0, 1, 1,
-    -1, -1, 1, 0, -1, 0, 0, 1,
-
-    1, -1, 1, 1, 0, 0, 0, 0,
-    1, -1, -1, 1, 0, 0, 1, 0,
-    1, 1, -1, 1, 0, 0, 1, 1,
-    1, 1, 1, 1, 0, 0, 0, 1,
-
-    -1, -1, -1, -1, 0, 0, 0, 0,
-    -1, -1, 1, -1, 0, 0, 1, 0,
-    -1, 1, 1, -1, 0, 0, 1, 1,
-    -1, 1, -1, -1, 0, 0, 0, 1,
-]);
-
-const cubeIndices = new Uint16Array([
-    0, 1, 2, 2, 3, 0,
-    4, 5, 6, 6, 7, 4,
-    8, 9, 10, 10, 11, 8,
-    12, 13, 14, 14, 15, 12,
-    16, 17, 18, 18, 19, 16,
-    20, 21, 22, 22, 23, 20,
-]);
+const vertices = sphere.vertices;
+const indices = sphere.indices;
 
 export async function init() {
     canvas = document.getElementById("GLCanvas") as HTMLCanvasElement
@@ -87,19 +52,19 @@ export async function init() {
     });
 
     vertexBuffer = device.createBuffer({
-        size: cubeVertices.byteLength,
+        size: vertices.byteLength,
         usage: GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_DST,
         mappedAtCreation: true,
     });
-    new Float32Array(vertexBuffer.getMappedRange()).set(cubeVertices);
+    new Float32Array(vertexBuffer.getMappedRange()).set(vertices);
     vertexBuffer.unmap();
 
     indexBuffer = device.createBuffer({
-        size: cubeIndices.byteLength,
+        size: indices.byteLength,
         usage: GPUBufferUsage.INDEX | GPUBufferUsage.COPY_DST,
         mappedAtCreation: true,
     });
-    new Uint16Array(indexBuffer.getMappedRange()).set(cubeIndices);
+    new Uint16Array(indexBuffer.getMappedRange()).set(indices);
     indexBuffer.unmap();
 
     uniformBuffer = device.createBuffer({
@@ -177,7 +142,7 @@ export function loop() {
     pass.setVertexBuffer(0, vertexBuffer);
     pass.setIndexBuffer(indexBuffer, "uint16");
     pass.setBindGroup(0, uniformBindGroup);
-    pass.drawIndexed(cubeIndices.length);
+    pass.drawIndexed(indices.length);
     pass.end();
     device.queue.submit([encoder.finish()])
 

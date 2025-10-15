@@ -34,7 +34,7 @@ fn main(input: VertexInput) -> VertexOutput {
 
   var output: VertexOutput;
   output.clip_position = uniforms.proj * uniforms.view * world_pos;
-  output.world_pos = world_pos.xyz;
+  output.world_pos = input.position;
   output.normal = normal_world;
   output.uv = input.uv;
 
