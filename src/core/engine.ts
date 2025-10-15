@@ -1,38 +1,42 @@
-import vertexWGSL from "../shaders/vertex.wgsl?raw"
-import fragmentWGSL from "../shaders/fragment.wgsl?raw"
-import * as Geometry from "../misc/geometry"
+import vertexWGSL from "../shaders/vertex.wgsl?raw";
+import fragmentWGSL from "../shaders/fragment.wgsl?raw";
+import * as Geometry from "../misc/geometry";
 
-let canvas: HTMLCanvasElement
-let device: GPUDevice
-let context: GPUCanvasContext
-let format: GPUTextureFormat
-let pipeline: GPURenderPipeline
-let depthTexture: GPUTexture
+let canvas: HTMLCanvasElement;
+let device: GPUDevice;
+let context: GPUCanvasContext;
+let format: GPUTextureFormat;
+let pipeline: GPURenderPipeline;
+let depthTexture: GPUTexture;
 
-let vertexBuffer: GPUBuffer
-let indexBuffer: GPUBuffer
-let uniformBuffer: GPUBuffer
-let uniformBindGroup: GPUBindGroup
-let startTime = performance.now()
+let vertexBuffer: GPUBuffer;
+let indexBuffer: GPUBuffer;
+let uniformBuffer: GPUBuffer;
+let uniformBindGroup: GPUBindGroup;
+let startTime = performance.now();
 
-const sphere = Geometry.generateSphere();
+let texture: GPUTexture;
+let sampler: GPUSampler;
+let textureBindGroup: GPUBindGroup;
+
+const sphere = Geometry.generateSphere(1, 64, 64);
 
 const vertices = sphere.vertices;
 const indices = sphere.indices;
 
 export async function init() {
-    canvas = document.getElementById("GLCanvas") as HTMLCanvasElement
-    const adapter = await navigator.gpu?.requestAdapter()
+    canvas = document.getElementById("GLCanvas") as HTMLCanvasElement;
+    const adapter = await navigator.gpu?.requestAdapter();
     if (!adapter)
-        throw new Error("Browser does not support WebGPU")
+        throw new Error("Browser does not support WebGPU");
 
-    device = await adapter?.requestDevice()
+    device = await adapter?.requestDevice();
     if (!device)
-        throw new Error("Browser does not support WebGPU")
+        throw new Error("Browser does not support WebGPU");
 
-    context = canvas.getContext("webgpu")!
+    context = canvas.getContext("webgpu")!;
     if (!context)
-        throw new Error("Failed to get canvas context")
+        throw new Error("Failed to get canvas context");
 
     const devicePixelRatio = window.devicePixelRatio || 1;
 
@@ -43,7 +47,7 @@ export async function init() {
     context.configure({
         device: device,
         format: format
-    })
+    });
 
     depthTexture = device.createTexture({
         size: [canvas.width, canvas.height],
@@ -72,8 +76,43 @@ export async function init() {
         usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
     });
 
+    const url = "http://localhost:5173/texture/Rock058_8K-JPG_Color.jpg";
+    const img = document.createElement('img');
+
+    img.src = url;
+    await img.decode();
+
+    const imageBitmap = await createImageBitmap(img);
+    texture = device.createTexture({
+        size: [imageBitmap.width, imageBitmap.height, 1],
+        format: 'rgba8unorm',
+        usage: GPUTextureUsage.TEXTURE_BINDING | GPUTextureUsage.COPY_DST,
+    });
+
+    sampler = device.createSampler({ magFilter: 'linear', minFilter: 'linear' });
+
+    device.queue.copyExternalImageToTexture(
+        { source: imageBitmap },
+        { texture },
+        [imageBitmap.width, imageBitmap.height]
+    );
+
+    const pipelineLayout = device.createPipelineLayout({
+        bindGroupLayouts: [
+            device.createBindGroupLayout({
+                entries: [{ binding: 0, visibility: GPUShaderStage.VERTEX, buffer: { type: "uniform" } }],
+            }),
+            device.createBindGroupLayout({
+                entries: [
+                    { binding: 0, visibility: GPUShaderStage.FRAGMENT, sampler: {} },
+                    { binding: 1, visibility: GPUShaderStage.FRAGMENT, texture: {} },
+                ],
+            }),
+        ],
+    });
+
     pipeline = device.createRenderPipeline({
-        layout: "auto",
+        layout: pipelineLayout,
         vertex: {
             module: device.createShaderModule({ code: vertexWGSL }),
             entryPoint: "main",
@@ -105,6 +144,14 @@ export async function init() {
         layout: pipeline.getBindGroupLayout(0),
         entries: [{ binding: 0, resource: { buffer: uniformBuffer } }],
     });
+
+    textureBindGroup = device.createBindGroup({
+        layout: pipeline.getBindGroupLayout(1),
+        entries: [
+            { binding: 0, resource: sampler },
+            { binding: 1, resource: texture.createView() },
+        ]
+    });
 }
 
 export function loop() {
@@ -115,7 +162,7 @@ export function loop() {
     const near = 0.1;
     const far = 100;
     const proj = mat4_perspective(fov, aspect, near, far);
-    const view = mat4_lookAt([3, 3, 3], [0, 0, 0], [0, 1, 0]);
+    const view = mat4_lookAt([1.5, 0, 1.5], [0, 0, 0], [0, 1, 0]);
     const model = mat4_rotationY(now);
 
     device.queue.writeBuffer(uniformBuffer, 0, new Float32Array(model));
@@ -142,11 +189,12 @@ export function loop() {
     pass.setVertexBuffer(0, vertexBuffer);
     pass.setIndexBuffer(indexBuffer, "uint16");
     pass.setBindGroup(0, uniformBindGroup);
+    pass.setBindGroup(1, textureBindGroup);
     pass.drawIndexed(indices.length);
     pass.end();
-    device.queue.submit([encoder.finish()])
+    device.queue.submit([encoder.finish()]);
 
-    requestAnimationFrame(loop)
+    requestAnimationFrame(loop);
 }
 
 function mat4_perspective(fov: number, aspect: number, near: number, far: number): Float32Array {
