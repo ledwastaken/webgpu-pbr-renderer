@@ -5,19 +5,24 @@ struct FragmentInput {
     @location(3) camera_pos: vec3<f32>,
 };
 
-@group(1) @binding(0) var textureSampler: sampler;
-@group(1) @binding(1) var textureData: texture_2d<f32>;
+@group(1) @binding(0) var baseColorSampler: sampler;
+@group(1) @binding(1) var baseColorData: texture_2d<f32>;
+@group(1) @binding(2) var normalSampler: sampler;
+@group(1) @binding(3) var normalData: texture_2d<f32>;
 
 @fragment
 fn main(input: FragmentInput) -> @location(0) vec4<f32> {
     let light_pos = vec3<f32>(20, 10, 4);
-    let N = normalize(input.normal);
     let V = normalize(input.camera_pos - input.world_pos);
     let L = normalize(light_pos - input.world_pos);
     let H = normalize(V + L);
     let PI: f32 = 3.14159265359;
 
-    let base_color = textureSample(textureData, textureSampler, input.uv);
+    let base_color = textureSample(baseColorData, baseColorSampler, input.uv);
+    let normal_map = textureSample(normalData, normalSampler, input.uv);
+    let T = normalize(cross(vec3<f32>(0.0, 1.0, 0.0), input.normal));
+    let B = cross(input.normal, T);
+    let N = normalize(T * normal_map.x + B * normal_map.y + input.normal * normal_map.z);
 
     let NdotH = max(dot(N, H), 0.0);
     let NdotV = max(dot(N, V), 0.0);

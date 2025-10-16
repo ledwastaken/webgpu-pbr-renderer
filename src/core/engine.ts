@@ -17,6 +17,8 @@ let startTime = performance.now();
 
 let albedoTexture: GPUTexture;
 let albedoSampler: GPUSampler;
+let normalTexture: GPUTexture;
+let normalSampler: GPUSampler;
 let textureBindGroup: GPUBindGroup;
 
 const sphere = Geometry.generateSphere();
@@ -76,26 +78,44 @@ export async function init() {
         usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
     });
 
-    const url = import.meta.env.BASE_URL + "texture/Metal046B_2K-JPG_Color.jpg";
-    const img = document.createElement('img');
+    // const url = import.meta.env.BASE_URL + "texture/Metal046B_2K-JPG_Color.jpg";
+    // const img = document.createElement('img');
 
-    img.src = url;
-    await img.decode();
+    // img.src = url;
+    // await img.decode();
 
-    const imageBitmap = await createImageBitmap(img);
-    albedoTexture = device.createTexture({
-        size: [imageBitmap.width, imageBitmap.height, 1],
-        format: 'rgba8unorm',
-        usage: GPUTextureUsage.TEXTURE_BINDING | GPUTextureUsage.COPY_DST,
-    });
+    // let imageBitmap = await createImageBitmap(img);
+    // albedoTexture = device.createTexture({
+    //     size: [imageBitmap.width, imageBitmap.height, 1],
+    //     format: 'rgba8unorm',
+    //     usage: GPUTextureUsage.TEXTURE_BINDING | GPUTextureUsage.COPY_DST,
+    // });
+    // albedoSampler = device.createSampler({ magFilter: 'linear', minFilter: 'linear' });
 
-    albedoSampler = device.createSampler({ magFilter: 'linear', minFilter: 'linear' });
+    // device.queue.copyExternalImageToTexture(
+    //     { source: imageBitmap },
+    //     { texture: albedoTexture },
+    //     [imageBitmap.width, imageBitmap.height]
+    // );
 
-    device.queue.copyExternalImageToTexture(
-        { source: imageBitmap },
-        { texture: albedoTexture },
-        [imageBitmap.width, imageBitmap.height]
-    );
+    // img.src = import.meta.env.BASE_URL + "texture/Metal046B_2K-JPG_Displacement.jpg";
+    // await img.decode();
+
+    // imageBitmap = await createImageBitmap(img);
+    // normalTexture = device.createTexture({
+    //     size: [imageBitmap.width, imageBitmap.height, 1],
+    //     format: 'rgba8unorm',
+    //     usage: GPUTextureUsage.TEXTURE_BINDING | GPUTextureUsage.COPY_DST,
+    // })
+    // normalSampler = device.createSampler({ magFilter: 'linear', minFilter: 'linear' });
+
+    // device.queue.copyExternalImageToTexture(
+    //     { source: imageBitmap },
+    //     { texture: normalTexture },
+    //     [imageBitmap.width, imageBitmap.height]
+    // );
+    [albedoTexture, albedoSampler] = await loadTexture(import.meta.env.BASE_URL + "texture/Metal046B_2K-JPG_Color.jpg");
+    [normalTexture, normalSampler] = await loadTexture(import.meta.env.BASE_URL + "texture/Metal046B_2K-JPG_NormalGL.jpg");
 
     const pipelineLayout = device.createPipelineLayout({
         bindGroupLayouts: [
@@ -106,6 +126,8 @@ export async function init() {
                 entries: [
                     { binding: 0, visibility: GPUShaderStage.FRAGMENT, sampler: {} },
                     { binding: 1, visibility: GPUShaderStage.FRAGMENT, texture: {} },
+                    { binding: 2, visibility: GPUShaderStage.FRAGMENT, sampler: {} },
+                    { binding: 3, visibility: GPUShaderStage.FRAGMENT, texture: {} },
                 ],
             }),
         ],
@@ -150,8 +172,33 @@ export async function init() {
         entries: [
             { binding: 0, resource: albedoSampler },
             { binding: 1, resource: albedoTexture.createView() },
+            { binding: 2, resource: normalSampler },
+            { binding: 3, resource: normalTexture.createView() },
         ]
     });
+}
+
+async function loadTexture(url: string): Promise<[GPUTexture, GPUSampler]> {
+    const img = document.createElement('img');
+
+    img.src = url;
+    await img.decode();
+
+    let imageBitmap = await createImageBitmap(img);
+    let texture = device.createTexture({
+        size: [imageBitmap.width, imageBitmap.height, 1],
+        format: 'rgba8unorm',
+        usage: GPUTextureUsage.TEXTURE_BINDING | GPUTextureUsage.COPY_DST,
+    });
+    let sampler = device.createSampler({ magFilter: 'linear', minFilter: 'linear' });
+
+    device.queue.copyExternalImageToTexture(
+        { source: imageBitmap },
+        { texture: texture },
+        [imageBitmap.width, imageBitmap.height]
+    );
+
+    return [texture, sampler];
 }
 
 export function loop() {
