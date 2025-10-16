@@ -76,7 +76,8 @@ export async function init() {
         usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
     });
 
-    const url = "http://localhost:5173/texture/Rock058_8K-JPG_Color.jpg";
+    const url = import.meta.env.BASE_URL + "texture/Metal046B_2K-JPG_Color.jpg";
+    console.log(url)
     const img = document.createElement('img');
 
     img.src = url;
