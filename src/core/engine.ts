@@ -15,8 +15,8 @@ let uniformBuffer: GPUBuffer;
 let uniformBindGroup: GPUBindGroup;
 let startTime = performance.now();
 
-let texture: GPUTexture;
-let sampler: GPUSampler;
+let albedoTexture: GPUTexture;
+let albedoSampler: GPUSampler;
 let textureBindGroup: GPUBindGroup;
 
 const sphere = Geometry.generateSphere();
@@ -77,24 +77,23 @@ export async function init() {
     });
 
     const url = import.meta.env.BASE_URL + "texture/Metal046B_2K-JPG_Color.jpg";
-    console.log(url)
     const img = document.createElement('img');
 
     img.src = url;
     await img.decode();
 
     const imageBitmap = await createImageBitmap(img);
-    texture = device.createTexture({
+    albedoTexture = device.createTexture({
         size: [imageBitmap.width, imageBitmap.height, 1],
         format: 'rgba8unorm',
         usage: GPUTextureUsage.TEXTURE_BINDING | GPUTextureUsage.COPY_DST,
     });
 
-    sampler = device.createSampler({ magFilter: 'linear', minFilter: 'linear' });
+    albedoSampler = device.createSampler({ magFilter: 'linear', minFilter: 'linear' });
 
     device.queue.copyExternalImageToTexture(
         { source: imageBitmap },
-        { texture },
+        { texture: albedoTexture },
         [imageBitmap.width, imageBitmap.height]
     );
 
@@ -149,8 +148,8 @@ export async function init() {
     textureBindGroup = device.createBindGroup({
         layout: pipeline.getBindGroupLayout(1),
         entries: [
-            { binding: 0, resource: sampler },
-            { binding: 1, resource: texture.createView() },
+            { binding: 0, resource: albedoSampler },
+            { binding: 1, resource: albedoTexture.createView() },
         ]
     });
 }
@@ -164,7 +163,7 @@ export function loop() {
     const far = 100;
     const proj = mat4_perspective(fov, aspect, near, far);
     const view = mat4_lookAt([1.5, 0, 1.5], [0, 0, 0], [0, 1, 0]);
-    const model = mat4_rotationY(now * 0.5);
+    const model = mat4_rotationY(now * 0.3);
 
     device.queue.writeBuffer(uniformBuffer, 0, new Float32Array(model));
     device.queue.writeBuffer(uniformBuffer, 64, new Float32Array(view));
