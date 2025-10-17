@@ -3,8 +3,8 @@ import fragmentWGSL from "../shaders/fragment.wgsl?raw";
 import * as Geometry from "../misc/geometry";
 
 let canvas: HTMLCanvasElement;
-let device: GPUDevice;
-let context: GPUCanvasContext;
+export let device: GPUDevice;
+export let context: GPUCanvasContext;
 let format: GPUTextureFormat;
 let pipeline: GPURenderPipeline;
 let depthTexture: GPUTexture;
