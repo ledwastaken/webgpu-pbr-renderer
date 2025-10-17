@@ -1,4 +1,4 @@
-import * as Engine from "../core/engine";
+import { engine } from "../core/engine";
 
 export class Mesh {
     public indicesCount: number;
@@ -7,7 +7,7 @@ export class Mesh {
 
     public constructor(vertices: Float32Array, indices: Int16Array) {
         this.indicesCount = indices.length;
-        this.vertexBuffer = Engine.device.createBuffer({
+        this.vertexBuffer = engine.device.createBuffer({
             size: vertices.byteLength,
             usage: GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_DST,
             mappedAtCreation: true,
@@ -16,7 +16,7 @@ export class Mesh {
         new Float32Array(this.vertexBuffer.getMappedRange()).set(vertices);
         this.vertexBuffer.unmap();
 
-        this.indexBuffer = Engine.device.createBuffer({
+        this.indexBuffer = engine.device.createBuffer({
             size: indices.byteLength,
             usage: GPUBufferUsage.INDEX | GPUBufferUsage.COPY_DST,
             mappedAtCreation: true,

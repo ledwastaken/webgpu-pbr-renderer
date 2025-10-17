@@ -1,3 +1,9 @@
-import * as Engine from "./core/engine"
+import { engine } from "./core/engine"
+import { Sphere } from "./scene/sphere"
 
-Engine.init().then(Engine.loop)
+await engine.init();
+
+let ball = new Sphere();
+engine.meshes.push(ball);
+
+await engine.loop();
