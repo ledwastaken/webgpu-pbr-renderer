@@ -19,17 +19,6 @@ fn D(alpha: f32, N: vec3<f32>, H: vec3<f32>) -> f32 {
 }
 
 // Schlick-Beckmann Geometry Shadowing Function
-// fn G1(alpha: f32, N: vec3<f32>, X: vec3<f32>) -> f32 {
-//     const pi = 3.14159265359;
-//     let numerator = max(dot(N, X), 0.0);
-
-//     let k = alpha / 2.0;
-//     var denominator = max(dot(N, X), 0.0) * (1.0 - k) + k;
-//     denominator = max(denominator, 0.00001);
-
-//     return numerator / denominator;
-// }
-
 fn G1(alpha: f32, N: vec3<f32>, X: vec3<f32>) -> f32 {
     let NdotX = max(dot(N, X), 0.0);
     // For direct lighting, use this remapping:
@@ -52,32 +41,36 @@ fn F(F0: vec3<f32>, V: vec3<f32>, H: vec3<f32>) -> vec3<f32> {
 fn main(input: FragmentInput) -> @location(0) vec4<f32> {
     const pi = 3.14159265359;
     let camera_pos = vec3<f32>(1.5, 0.0, 1.5);
-    let light_pos = vec3<f32>(1.0, 1.0, 0.1);
-    let light_color = vec3<f32>(4.0, 4.0, 4.0);
+    let light_pos = vec3<f32>(2.0, 1.0, 1.0);
+    let light_color = vec3<f32>(10.0);
     let albedo = vec3<f32>(0.8, 0.2, 0.2);
-    let roughness = 0.5;
-    let emissivity = vec3<f32>(0.01);
-    let base_reflectivity = vec3<f32>(0.0);
+    let roughness = clamp(0.5, 0.05, 1.0);
+    let metallic = 0.0;
+    let emissivity = vec3<f32>(0.0);
+
+    let F0 = mix(vec3<f32>(0.04), albedo, metallic);
     let alpha = roughness * roughness;
 
     let N = normalize(input.normal);
     let V = normalize(camera_pos - input.world_pos);
-    let L = normalize(light_pos);
+    let L = normalize(light_pos - input.world_pos);
     let H = normalize(V + L);
-    let F0 = base_reflectivity;
+
+    // attenuation
+    let distance = length(light_pos - input.world_pos);
+    let attenuation = 1.0 / (distance * distance);
+    let radiance = light_color * attenuation;
 
     let Ks = F(F0, V, H);
-    let Kd = vec3<f32>(1.0) - Ks;
-
+    let Kd = (vec3<f32>(1.0) - Ks) * (1.0 - metallic);
     let lambert = albedo / pi;
 
     let cookTorranceNumerator = D(alpha, N, H) * G(alpha, N, V, L) * F(F0, V, H);
-    var cookTorranceDenominator = 4.0 * max(dot(V, N), 0.0) * max(dot(L, N), 0.0);
-    cookTorranceDenominator = max(cookTorranceDenominator, 0.00001);
+    let cookTorranceDenominator = max(4.0 * max(dot(V, N), 0.0) * max(dot(L, N), 0.0), 0.0001);
     let cookTorrance = cookTorranceNumerator / cookTorranceDenominator;
 
     let BRDF = Kd * lambert + cookTorrance;
-    let outgoingLight = emissivity + BRDF * light_color * max(dot(L, N), 0.0);
+    let outgoingLight = emissivity + BRDF * radiance * max(dot(L, N), 0.0);
 
     return vec4<f32>(outgoingLight, 1.0);
 }
