@@ -1,11 +1,14 @@
 import { engine } from "../core/engine";
+import { CFrame } from "../types/cframe";
 
 export class Mesh {
+    public cframe: CFrame;
     public indicesCount: number;
     public vertexBuffer: GPUBuffer;
     public indexBuffer: GPUBuffer;
 
     public constructor(vertices: Float32Array, indices: Int16Array) {
+        this.cframe = new CFrame();
         this.indicesCount = indices.length;
         this.vertexBuffer = engine.device.createBuffer({
             size: vertices.byteLength,

@@ -1,5 +1,6 @@
 import { Mesh } from "../scene/mesh";
 import { pbrPipeline } from "../gfx/pbr-pipeline";
+import { Camera } from "../scene/camera";
 
 class Engine {
     canvas: HTMLCanvasElement;
@@ -7,11 +8,13 @@ class Engine {
     context!: GPUCanvasContext;
     format!: GPUTextureFormat;
 
+    camera: Camera;
     meshes: Array<Mesh>;
 
     constructor() {
         this.canvas = document.getElementById("GLCanvas") as HTMLCanvasElement;
         this.meshes = new Array<Mesh>();
+        this.camera = new Camera();
 
         const devicePixelRatio = window.devicePixelRatio || 1;
         this.canvas.width = this.canvas.clientWidth * devicePixelRatio;
