@@ -6,6 +6,9 @@ struct FragmentInput {
     @location(4) bitangent : vec3<f32>,
 };
 
+@group(1) @binding(0) var roughnessSampler: sampler;
+@group(1) @binding(1) var roughnessData: texture_2d<f32>;
+
 // GGX/Trowbridge-Reitz Normal Distribution Function
 fn D(alpha: f32, N: vec3<f32>, H: vec3<f32>) -> f32 {
     const pi = 3.14159265359;
@@ -44,7 +47,7 @@ fn main(input: FragmentInput) -> @location(0) vec4<f32> {
     let light_pos = vec3<f32>(2.0, 1.0, 1.0);
     let light_color = vec3<f32>(10.0);
     let albedo = vec3<f32>(0.8, 0.2, 0.2);
-    let roughness = clamp(0.5, 0.05, 1.0);
+    let roughness = textureSample(roughnessData, roughnessSampler, input.uv).r;
     let metallic = 0.0;
     let emissivity = vec3<f32>(0.0);
 

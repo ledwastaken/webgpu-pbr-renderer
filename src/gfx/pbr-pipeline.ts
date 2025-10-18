@@ -10,13 +10,22 @@ class PBRPipeline {
     private uniformBuffer!: GPUBuffer;
     private uniformBindGroup!: GPUBindGroup;
     private depthTexture!: GPUTexture;
+    private roughnessSampler!: GPUSampler;
+    private roughnessTexture!: GPUTexture;
+    private textureBindGroup!: GPUBindGroup;
 
-    public init() {
+    public async init() {
         const layout = engine.device.createPipelineLayout({
             bindGroupLayouts: [
                 engine.device.createBindGroupLayout({
                     entries: [
                         { binding: 0, visibility: GPUShaderStage.VERTEX, buffer: { type: "uniform" } }
+                    ],
+                }),
+                engine.device.createBindGroupLayout({
+                    entries: [
+                        { binding: 0, visibility: GPUShaderStage.FRAGMENT, sampler: {} },
+                        { binding: 1, visibility: GPUShaderStage.FRAGMENT, texture: {} },
                     ],
                 }),
             ],
@@ -61,6 +70,31 @@ class PBRPipeline {
             entries: [{ binding: 0, resource: { buffer: this.uniformBuffer } }],
         });
 
+        const img = document.createElement('img');
+
+        img.src = "texture/Metal046B_2K-JPG_Roughness.jpg";
+        await img.decode();
+
+        let imageBitmap = await createImageBitmap(img);
+        this.roughnessSampler = engine.device.createSampler({ magFilter: 'linear', minFilter: 'linear' });
+        this.roughnessTexture = engine.device.createTexture({
+            size: [imageBitmap.width, imageBitmap.height, 1],
+            format: 'rgba8unorm',
+            usage: GPUTextureUsage.TEXTURE_BINDING | GPUTextureUsage.COPY_DST,
+        });
+        engine.device.queue.copyExternalImageToTexture(
+            { source: imageBitmap },
+            { texture: this.roughnessTexture },
+            [imageBitmap.width, imageBitmap.height]
+        );
+
+        this.textureBindGroup = engine.device.createBindGroup({
+            layout: this.pipeline.getBindGroupLayout(1),
+            entries: [
+                { binding: 0, resource: this.roughnessSampler },
+                { binding: 1, resource: this.roughnessTexture.createView() },
+            ]
+        });
         this.depthTexture = engine.device.createTexture({
             size: [800, 600],
             format: 'depth24plus',
@@ -102,6 +136,7 @@ class PBRPipeline {
         renderPass.setVertexBuffer(0, mesh.vertexBuffer);
         renderPass.setIndexBuffer(mesh.indexBuffer, "uint16");
         renderPass.setBindGroup(0, this.uniformBindGroup);
+        renderPass.setBindGroup(1, this.textureBindGroup);
         renderPass.drawIndexed(mesh.indicesCount);
         renderPass.end();
         engine.device.queue.submit([commandEncoder.finish()]);

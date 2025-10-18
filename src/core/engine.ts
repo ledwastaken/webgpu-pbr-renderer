@@ -40,7 +40,7 @@ class Engine {
             format: this.format
         });
 
-        pbrPipeline.init();
+        await pbrPipeline.init();
     }
 
     async loop() {

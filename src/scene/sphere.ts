@@ -27,9 +27,14 @@ export class Sphere extends Mesh {
                 const ny = py / radius;
                 const nz = pz / radius;
 
-                const tx = -sinTheta * sinPhi;
-                const ty = 0;
-                const tz = sinTheta * cosPhi;
+                let tx = -sinPhi;
+                let ty = 0;
+                let tz = cosPhi;
+
+                const tlen = Math.sqrt(tx * tx + ty * ty + tz * tz);
+                tx /= tlen;
+                ty /= tlen;
+                tz /= tlen;
 
                 vertices.set([px, py, pz, nx, ny, nz, u, 1 - v, tx, ty, tz], vertexOffset);
                 vertexOffset += 11;
