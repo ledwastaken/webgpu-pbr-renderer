@@ -6,7 +6,78 @@ struct FragmentInput {
     @location(4) bitangent : vec3<f32>,
 };
 
+// GGX/Trowbridge-Reitz Normal Distribution Function
+fn D(alpha: f32, N: vec3<f32>, H: vec3<f32>) -> f32 {
+    const pi = 3.14159265359;
+    let numerator = pow(alpha, 2.0);
+
+    let NdotH = max(dot(N, H), 0.0);
+    var denominator = pi * pow(pow(NdotH, 2.0) * (pow(alpha, 2.0) - 1.0) + 1.0, 2.0);
+    denominator = max(denominator, 0.00001);
+
+    return numerator / denominator;
+}
+
+// Schlick-Beckmann Geometry Shadowing Function
+// fn G1(alpha: f32, N: vec3<f32>, X: vec3<f32>) -> f32 {
+//     const pi = 3.14159265359;
+//     let numerator = max(dot(N, X), 0.0);
+
+//     let k = alpha / 2.0;
+//     var denominator = max(dot(N, X), 0.0) * (1.0 - k) + k;
+//     denominator = max(denominator, 0.00001);
+
+//     return numerator / denominator;
+// }
+
+fn G1(alpha: f32, N: vec3<f32>, X: vec3<f32>) -> f32 {
+    let NdotX = max(dot(N, X), 0.0);
+    // For direct lighting, use this remapping:
+    let k = (alpha + 1.0) * (alpha + 1.0) / 8.0;
+    let denominator = NdotX * (1.0 - k) + k;
+    return NdotX / max(denominator, 0.00001);
+}
+
+// Smith model
+fn G(alpha: f32, N: vec3<f32>, V: vec3<f32>, L: vec3<f32>) -> f32 {
+    return G1(alpha, N, V) * G1(alpha, N, L);
+}
+
+// Fresnel-Schlick Function
+fn F(F0: vec3<f32>, V: vec3<f32>, H: vec3<f32>) -> vec3<f32> {
+    return F0 + (vec3<f32>(1.0) - F0) * pow(1 - max(dot(H, V), 0.0), 5.0);
+}
+
 @fragment
 fn main(input: FragmentInput) -> @location(0) vec4<f32> {
-    return vec4<f32>(0.8, 0.5, 0.5, 1.0);
+    const pi = 3.14159265359;
+    let camera_pos = vec3<f32>(1.5, 0.0, 1.5);
+    let light_pos = vec3<f32>(1.0, 1.0, 0.1);
+    let light_color = vec3<f32>(4.0, 4.0, 4.0);
+    let albedo = vec3<f32>(0.8, 0.2, 0.2);
+    let roughness = 0.5;
+    let emissivity = vec3<f32>(0.01);
+    let base_reflectivity = vec3<f32>(0.0);
+    let alpha = roughness * roughness;
+
+    let N = normalize(input.normal);
+    let V = normalize(camera_pos - input.world_pos);
+    let L = normalize(light_pos);
+    let H = normalize(V + L);
+    let F0 = base_reflectivity;
+
+    let Ks = F(F0, V, H);
+    let Kd = vec3<f32>(1.0) - Ks;
+
+    let lambert = albedo / pi;
+
+    let cookTorranceNumerator = D(alpha, N, H) * G(alpha, N, V, L) * F(F0, V, H);
+    var cookTorranceDenominator = 4.0 * max(dot(V, N), 0.0) * max(dot(L, N), 0.0);
+    cookTorranceDenominator = max(cookTorranceDenominator, 0.00001);
+    let cookTorrance = cookTorranceNumerator / cookTorranceDenominator;
+
+    let BRDF = Kd * lambert + cookTorrance;
+    let outgoingLight = emissivity + BRDF * light_color * max(dot(L, N), 0.0);
+
+    return vec4<f32>(outgoingLight, 1.0);
 }
