@@ -116,26 +116,19 @@ class PBRPipeline {
         return [texture, sampler];
     }
 
-    public draw(mesh: Mesh) {
+    public draw(commandEncoder: GPUCommandEncoder, mesh: Mesh, view: Float32Array, proj: Float32Array) {
         const now = (performance.now() - startTime) / 1000;
-        const aspect = 800.0 / 600.0;
-        const fov = Math.PI / 2;
-        const near = 0.1;
-        const far = 100;
-        const proj = mat4_perspective(fov, aspect, near, far);
-        const view = mat4_lookAt([1.5, 0, 1.5], [0, 0, 0], [0, 1, 0]);
         const model = mat4_rotationY(now * 0.3);
 
         engine.device.queue.writeBuffer(this.uniformBuffer, 0, new Float32Array(model));
         engine.device.queue.writeBuffer(this.uniformBuffer, 64, new Float32Array(view));
         engine.device.queue.writeBuffer(this.uniformBuffer, 128, new Float32Array(proj));
 
-        const commandEncoder = engine.device.createCommandEncoder();
         const renderPass = commandEncoder.beginRenderPass({
             colorAttachments: [{
                 view: engine.context.getCurrentTexture().createView(),
                 clearValue: { r: 0.0, g: 0.0, b: 0.0, a: 1 },
-                loadOp: "clear",
+                loadOp: "load",
                 storeOp: "store",
             }],
             depthStencilAttachment: {
@@ -153,42 +146,10 @@ class PBRPipeline {
         renderPass.setBindGroup(1, this.textureBindGroup);
         renderPass.drawIndexed(mesh.indicesCount);
         renderPass.end();
-        engine.device.queue.submit([commandEncoder.finish()]);
     }
 }
 
 export let pbrPipeline = new PBRPipeline();
-
-function mat4_perspective(fov: number, aspect: number, near: number, far: number): Float32Array {
-    const f = 1.0 / Math.tan(fov / 2);
-    const nf = 1 / (near - far);
-    return new Float32Array([
-        f / aspect, 0, 0, 0,
-        0, f, 0, 0,
-        0, 0, (far + near) * nf, -1,
-        0, 0, 2 * far * near * nf, 0,
-    ]);
-}
-
-function mat4_lookAt(eye: number[], center: number[], up: number[]): Float32Array {
-    const [ex, ey, ez] = eye;
-    const [cx, cy, cz] = center;
-    const [ux, uy, uz] = up;
-    let zx = ex - cx, zy = ey - cy, zz = ez - cz;
-    const zlen = Math.hypot(zx, zy, zz); zx /= zlen; zy /= zlen; zz /= zlen;
-    let xx = uy * zz - uz * zy, xy = uz * zx - ux * zz, xz = ux * zy - uy * zx;
-    const xlen = Math.hypot(xx, xy, xz); xx /= xlen; xy /= xlen; xz /= xlen;
-    const yx = zy * xz - zz * xy, yy = zz * xx - zx * xz, yz = zx * xy - zy * xx;
-    return new Float32Array([
-        xx, yx, zx, 0,
-        xy, yy, zy, 0,
-        xz, yz, zz, 0,
-        -(xx * ex + xy * ey + xz * ez),
-        -(yx * ex + yy * ey + yz * ez),
-        -(zx * ex + zy * ey + zz * ez),
-        1,
-    ]);
-}
 
 function mat4_rotationY(angle: number): Float32Array {
     const c = Math.cos(angle);

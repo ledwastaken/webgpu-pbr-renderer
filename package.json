@@ -15,6 +15,7 @@
     "vite": "^7.1.7"
   },
   "dependencies": {
-    "@webgpu/types": "^0.1.65"
+    "@webgpu/types": "^0.1.65",
+    "parse-exr": "^1.0.2"
   }
 }
