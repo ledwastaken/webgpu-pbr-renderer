@@ -38,9 +38,9 @@ class SkyboxPipeline {
                 entryPoint: "main",
                 buffers: [
                     {
-                        arrayStride: (3) * 4,
+                        arrayStride: (4) * 4,
                         attributes: [
-                            { shaderLocation: 0, offset: 0, format: "float32x3" },
+                            { shaderLocation: 0, offset: 0, format: "float32x4" },
                         ],
                     },
                 ],
@@ -50,7 +50,7 @@ class SkyboxPipeline {
                 entryPoint: "main",
                 targets: [{ format: navigator.gpu.getPreferredCanvasFormat() }],
             },
-            primitive: { topology: "triangle-list", cullMode: "back" },
+            primitive: { topology: "triangle-list", cullMode: "none" },
             depthStencil: {
                 format: "depth24plus",
                 depthWriteEnabled: true,
@@ -59,38 +59,47 @@ class SkyboxPipeline {
         });
 
         const vertices = new Float32Array([
-            // front face
-            1, 1, 1,
-            -1, 1, 1,
-            -1, -1, 1,
-            -1, -1, 1,
-            1, -1, 1,
-            1, 1, 1,
-            // right face
-            1, 1, -1,
-            1, 1, 1,
-            1, -1, -1,
-            1, -1, 1,
-            // back face
-            1, 1, -1,
-            1, -1, -1,
-            -1, 1, -1,
-            -1, -1, -1,
-            // left face
-            -1, 1, 1,
-            -1, 1, -1,
-            -1, -1, 1,
-            -1, -1, -1,
-            // bottom face
-            1, -1, 1,
-            -1, -1, 1,
-            1, -1, -1,
-            -1, -1, -1,
-            // top face
-            -1, 1, 1,
-            1, 1, 1,
-            -1, 1, -1,
-            1, 1, -1,
+            1, -1, 1, 1,
+            -1, -1, 1, 1,
+            -1, -1, -1, 1,
+            1, -1, -1, 1,
+            1, -1, 1, 1,
+            -1, -1, -1, 1,
+
+            1, 1, 1, 1,
+            1, -1, 1, 1,
+            1, -1, -1, 1,
+            1, 1, -1, 1,
+            1, 1, 1, 1,
+            1, -1, -1, 1,
+
+            -1, 1, 1, 1,
+            1, 1, 1, 1,
+            1, 1, -1, 1,
+            -1, 1, -1, 1,
+            -1, 1, 1, 1,
+            1, 1, -1, 1,
+
+            -1, -1, 1, 1,
+            -1, 1, 1, 1,
+            -1, 1, -1, 1,
+            -1, -1, -1, 1,
+            -1, -1, 1, 1,
+            -1, 1, -1, 1,
+
+            1, 1, 1, 1,
+            -1, 1, 1, 1,
+            -1, -1, 1, 1,
+            -1, -1, 1, 1,
+            1, -1, 1, 1,
+            1, 1, 1, 1,
+
+            1, -1, -1, 1,
+            -1, -1, -1, 1,
+            -1, 1, -1, 1,
+            1, 1, -1, 1,
+            1, -1, -1, 1,
+            -1, 1, -1, 1,
         ]);
 
         this.cubeVertexBuffer = engine.device.createBuffer({
@@ -140,7 +149,7 @@ class SkyboxPipeline {
         renderPass.setBindGroup(0, this.uniformBindGroup);
         renderPass.setBindGroup(1, textureBindGroup);
         renderPass.setVertexBuffer(0, this.cubeVertexBuffer);
-        renderPass.draw(6);
+        renderPass.draw(36);
         renderPass.end();
     }
 }

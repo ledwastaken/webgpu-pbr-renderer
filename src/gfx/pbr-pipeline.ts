@@ -3,12 +3,11 @@ import vertexWGSL from "../shaders/pbr-vertex.wgsl?raw";
 import fragmentWGSL from "../shaders/pbr-fragment.wgsl?raw";
 import type { Mesh } from "../scene/mesh";
 
-let startTime = performance.now();
-
 class PBRPipeline {
-    private pipeline!: GPURenderPipeline;
+    public pipeline!: GPURenderPipeline;
     private uniformBuffer!: GPUBuffer;
     private uniformBindGroup!: GPUBindGroup;
+
     private depthTexture!: GPUTexture;
     private albedoSampler!: GPUSampler;
     private albedoTexture!: GPUTexture;
@@ -22,6 +21,11 @@ class PBRPipeline {
                 engine.device.createBindGroupLayout({
                     entries: [
                         { binding: 0, visibility: GPUShaderStage.VERTEX, buffer: { type: "uniform" } }
+                    ],
+                }),
+                engine.device.createBindGroupLayout({
+                    entries: [
+                        { binding: 0, visibility: GPUShaderStage.FRAGMENT, buffer: { type: "uniform" } }
                     ],
                 }),
                 engine.device.createBindGroupLayout({
@@ -78,7 +82,7 @@ class PBRPipeline {
         [this.albedoTexture, this.albedoSampler] = await this.loadTexture("texture/Metal046B_2K-JPG_Color.jpg");
 
         this.textureBindGroup = engine.device.createBindGroup({
-            layout: this.pipeline.getBindGroupLayout(1),
+            layout: this.pipeline.getBindGroupLayout(2),
             entries: [
                 { binding: 0, resource: this.albedoSampler },
                 { binding: 1, resource: this.albedoTexture.createView() },
@@ -116,9 +120,8 @@ class PBRPipeline {
         return [texture, sampler];
     }
 
-    public draw(commandEncoder: GPUCommandEncoder, mesh: Mesh, view: Float32Array, proj: Float32Array) {
-        const now = (performance.now() - startTime) / 1000;
-        const model = mat4_rotationY(now * 0.3);
+    public draw(commandEncoder: GPUCommandEncoder, mesh: Mesh, view: Float32Array, proj: Float32Array, fragmentBindGroup: GPUBindGroup) {
+        const model = mat4_rotationY(0);
 
         engine.device.queue.writeBuffer(this.uniformBuffer, 0, new Float32Array(model));
         engine.device.queue.writeBuffer(this.uniformBuffer, 64, new Float32Array(view));
@@ -143,7 +146,8 @@ class PBRPipeline {
         renderPass.setVertexBuffer(0, mesh.vertexBuffer);
         renderPass.setIndexBuffer(mesh.indexBuffer, "uint16");
         renderPass.setBindGroup(0, this.uniformBindGroup);
-        renderPass.setBindGroup(1, this.textureBindGroup);
+        renderPass.setBindGroup(1, fragmentBindGroup);
+        renderPass.setBindGroup(2, this.textureBindGroup);
         renderPass.drawIndexed(mesh.indicesCount);
         renderPass.end();
     }

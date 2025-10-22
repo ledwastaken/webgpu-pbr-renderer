@@ -6,10 +6,17 @@ struct FragmentInput {
     @location(4) bitangent : vec3<f32>,
 };
 
-@group(1) @binding(0) var albedoSampler: sampler;
-@group(1) @binding(1) var albedoData: texture_2d<f32>;
-@group(1) @binding(2) var roughnessSampler: sampler;
-@group(1) @binding(3) var roughnessData: texture_2d<f32>;
+struct Uniforms {
+    camera_pos: vec3<f32>,
+    light_pos: vec3<f32>,
+};
+
+@group(1) @binding(0) var<uniform> uniforms: Uniforms;
+
+@group(2) @binding(0) var albedoSampler: sampler;
+@group(2) @binding(1) var albedoData: texture_2d<f32>;
+@group(2) @binding(2) var roughnessSampler: sampler;
+@group(2) @binding(3) var roughnessData: texture_2d<f32>;
 
 // GGX/Trowbridge-Reitz Normal Distribution Function
 fn D(alpha: f32, N: vec3<f32>, H: vec3<f32>) -> f32 {
@@ -45,8 +52,8 @@ fn F(F0: vec3<f32>, V: vec3<f32>, H: vec3<f32>) -> vec3<f32> {
 @fragment
 fn main(input: FragmentInput) -> @location(0) vec4<f32> {
     const pi = 3.14159265359;
-    let camera_pos = vec3<f32>(1.5, 0.0, 1.5);
-    let light_pos = vec3<f32>(8.0, 4.0, 8.0);
+    let camera_pos = uniforms.camera_pos;
+    let light_pos = uniforms.light_pos;
     let light_color = vec3<f32>(300.0);
     let albedo = textureSample(albedoData, albedoSampler, input.uv).rgb;
     let roughness = textureSample(roughnessData, roughnessSampler, input.uv).r;

@@ -40,11 +40,16 @@ function copySourcesToTexture(texture: GPUTexture, sources: Array<ImageBitmap>) 
     });
 }
 
+let startTime = performance.now();
+
 class Engine {
     canvas: HTMLCanvasElement;
     device!: GPUDevice;
     context!: GPUCanvasContext;
     format!: GPUTextureFormat;
+
+    fragmentBuffer!: GPUBuffer;
+    fragmentBindGroup!: GPUBindGroup;
 
     skyboxTexture!: GPUTexture;
     skyboxSampler!: GPUSampler;
@@ -101,21 +106,37 @@ class Engine {
                 { binding: 1, resource: this.skyboxTexture.createView({ dimension: 'cube' }) },
             ],
         });
+
+        this.fragmentBuffer = engine.device.createBuffer({
+            size: Float32Array.BYTES_PER_ELEMENT * 8,
+            usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
+        });
+        this.fragmentBindGroup = engine.device.createBindGroup({
+            layout: pbrPipeline.pipeline.getBindGroupLayout(1),
+            entries: [{ binding: 0, resource: { buffer: this.fragmentBuffer } }],
+        });
     }
 
     async loop() {
+        let now = performance.now() - startTime;
+        let x = Math.cos(now * 0.0005) * 2;
+        let y = 1;
+        let z = Math.sin(now * 0.0005) * 2;
+
         const aspect = 800.0 / 600.0;
-        const fov = Math.PI / 2;
+        const fov = 120 * Math.PI / 180.0;
         const near = 0.1;
         const far = 100;
         const proj = mat4_perspective(fov, aspect, near, far);
-        const view = mat4_lookAt([1.5, 0, 1.5], [0, 0, 0], [0, 1, 0]);
+        const view = mat4_lookAt([x, y, z], [0, 0, 0], [0, 1, 0]);
 
-        const commandEncoder = this.device.createCommandEncoder();        
-        // SkyboxPipeline.draw(commandEncoder, this.skyboxBindGroup, view, proj);
+        engine.device.queue.writeBuffer(this.fragmentBuffer, 0, new Float32Array([x, y, z, 8, 4, 8]));
+
+        const commandEncoder = this.device.createCommandEncoder();
+        SkyboxPipeline.draw(commandEncoder, this.skyboxBindGroup, view, proj);
 
         for (let mesh of this.meshes) {
-            pbrPipeline.draw(commandEncoder, mesh, view, proj);
+            pbrPipeline.draw(commandEncoder, mesh, view, proj, this.fragmentBindGroup);
         }
 
         engine.device.queue.submit([commandEncoder.finish()]);
