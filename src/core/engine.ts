@@ -54,6 +54,7 @@ class Engine {
     skyboxTexture!: GPUTexture;
     skyboxSampler!: GPUSampler;
     skyboxBindGroup!: GPUBindGroup;
+    pbrSkyboxBindGroup!: GPUBindGroup;
 
     camera: Camera;
     meshes: Array<Mesh>;
@@ -106,6 +107,13 @@ class Engine {
                 { binding: 1, resource: this.skyboxTexture.createView({ dimension: 'cube' }) },
             ],
         });
+        this.pbrSkyboxBindGroup = this.device.createBindGroup({
+            layout: pbrPipeline.pipeline.getBindGroupLayout(3),
+            entries: [
+                { binding: 0, resource: this.skyboxSampler },
+                { binding: 1, resource: this.skyboxTexture.createView({ dimension: 'cube' }) },
+            ],
+        });
 
         this.fragmentBuffer = engine.device.createBuffer({
             size: Float32Array.BYTES_PER_ELEMENT * 8,
@@ -119,12 +127,12 @@ class Engine {
 
     async loop() {
         let now = performance.now() - startTime;
-        let x = Math.cos(now * 0.0005) * 2;
+        let x = Math.cos(now * 0.0003) * 2;
         let y = 1;
-        let z = Math.sin(now * 0.0005) * 2;
+        let z = Math.sin(now * 0.0003) * 2;
 
         const aspect = 800.0 / 600.0;
-        const fov = 120 * Math.PI / 180.0;
+        const fov = 100 * Math.PI / 180.0;
         const near = 0.1;
         const far = 100;
         const proj = mat4_perspective(fov, aspect, near, far);
@@ -136,7 +144,7 @@ class Engine {
         SkyboxPipeline.draw(commandEncoder, this.skyboxBindGroup, view, proj);
 
         for (let mesh of this.meshes) {
-            pbrPipeline.draw(commandEncoder, mesh, view, proj, this.fragmentBindGroup);
+            pbrPipeline.draw(commandEncoder, mesh, view, proj, this.fragmentBindGroup, this.pbrSkyboxBindGroup);
         }
 
         engine.device.queue.submit([commandEncoder.finish()]);

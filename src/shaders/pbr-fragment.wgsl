@@ -18,6 +18,9 @@ struct Uniforms {
 @group(2) @binding(2) var roughnessSampler: sampler;
 @group(2) @binding(3) var roughnessData: texture_2d<f32>;
 
+@group(3) @binding(0) var skyboxSampler: sampler;
+@group(3) @binding(1) var skyboxData: texture_cube<f32>;
+
 // GGX/Trowbridge-Reitz Normal Distribution Function
 fn D(alpha: f32, N: vec3<f32>, H: vec3<f32>) -> f32 {
     const pi = 3.14159265359;
@@ -57,8 +60,8 @@ fn main(input: FragmentInput) -> @location(0) vec4<f32> {
     let light_color = vec3<f32>(300.0);
     let albedo = textureSample(albedoData, albedoSampler, input.uv).rgb;
     let roughness = textureSample(roughnessData, roughnessSampler, input.uv).r;
-    let metallic = 0.0;
-    let emissivity = vec3<f32>(0.0);
+    let metallic = 1.0;
+    let emissivity = vec3<f32>(0.04);
 
     let F0 = mix(vec3<f32>(0.04), albedo, metallic);
     let alpha = roughness * roughness;
@@ -67,6 +70,9 @@ fn main(input: FragmentInput) -> @location(0) vec4<f32> {
     let V = normalize(camera_pos - input.world_pos);
     let L = normalize(light_pos - input.world_pos);
     let H = normalize(V + L);
+    let R = reflect(-V, N);
+
+    let envColor = textureSample(skyboxData, skyboxSampler, R).rgb;
 
     // attenuation
     let distance = length(light_pos - input.world_pos);
@@ -81,8 +87,10 @@ fn main(input: FragmentInput) -> @location(0) vec4<f32> {
     let cookTorranceDenominator = max(4.0 * max(dot(V, N), 0.0) * max(dot(L, N), 0.0), 0.0001);
     let cookTorrance = cookTorranceNumerator / cookTorranceDenominator;
 
+    let specularIBL = envColor * Ks;
+
     let BRDF = Kd * lambert + cookTorrance;
-    let outgoingLight = emissivity + BRDF * radiance * max(dot(L, N), 0.0);
+    let outgoingLight = emissivity + BRDF * radiance * max(dot(L, N), 0.0) + specularIBL;
 
     return vec4<f32>(outgoingLight, 1.0);
 }

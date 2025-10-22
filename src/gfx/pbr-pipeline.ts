@@ -36,6 +36,16 @@ class PBRPipeline {
                         { binding: 3, visibility: GPUShaderStage.FRAGMENT, texture: {} },
                     ],
                 }),
+                engine.device.createBindGroupLayout({
+                    entries: [
+                        { binding: 0, visibility: GPUShaderStage.FRAGMENT, sampler: {} },
+                        {
+                            binding: 1, visibility: GPUShaderStage.FRAGMENT, texture: {
+                                viewDimension: 'cube',
+                            }
+                        },
+                    ],
+                }),
             ],
         });
 
@@ -120,7 +130,7 @@ class PBRPipeline {
         return [texture, sampler];
     }
 
-    public draw(commandEncoder: GPUCommandEncoder, mesh: Mesh, view: Float32Array, proj: Float32Array, fragmentBindGroup: GPUBindGroup) {
+    public draw(commandEncoder: GPUCommandEncoder, mesh: Mesh, view: Float32Array, proj: Float32Array, fragmentBindGroup: GPUBindGroup, skyboxBindGroup: GPUBindGroup) {
         const model = mat4_rotationY(0);
 
         engine.device.queue.writeBuffer(this.uniformBuffer, 0, new Float32Array(model));
@@ -148,6 +158,7 @@ class PBRPipeline {
         renderPass.setBindGroup(0, this.uniformBindGroup);
         renderPass.setBindGroup(1, fragmentBindGroup);
         renderPass.setBindGroup(2, this.textureBindGroup);
+        renderPass.setBindGroup(3, skyboxBindGroup);
         renderPass.drawIndexed(mesh.indicesCount);
         renderPass.end();
     }
