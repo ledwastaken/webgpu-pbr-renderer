@@ -25,6 +25,7 @@ function createTextureFromSources(sources: ImageBitmap[]) {
             GPUTextureUsage.COPY_DST |
             GPUTextureUsage.RENDER_ATTACHMENT,
         dimension: '2d',
+        mipLevelCount: 5
     });
     copySourcesToTexture(texture, sources);
     return texture;

@@ -72,7 +72,7 @@ fn main(input: FragmentInput) -> @location(0) vec4<f32> {
     let H = normalize(V + L);
     let R = reflect(-V, N);
 
-    let envColor = textureSample(skyboxData, skyboxSampler, R).rgb;
+    let envColor = textureSampleLevel(skyboxData, skyboxSampler, R, 0).rgb;
 
     // attenuation
     let distance = length(light_pos - input.world_pos);
