@@ -51,6 +51,9 @@ class SkyboxPipeline {
                 targets: [{ format: navigator.gpu.getPreferredCanvasFormat() }],
             },
             primitive: { topology: "triangle-list", cullMode: "none" },
+            multisample: {
+                count: 4,
+            },
             depthStencil: {
                 format: "depth24plus",
                 depthWriteEnabled: true,
@@ -121,6 +124,7 @@ class SkyboxPipeline {
         });
         this.depthTexture = engine.device.createTexture({
             size: [800, 600],
+            sampleCount: 4,
             format: 'depth24plus',
             usage: GPUTextureUsage.RENDER_ATTACHMENT,
         });
@@ -132,7 +136,8 @@ class SkyboxPipeline {
 
         const renderPass = commandEncoder.beginRenderPass({
             colorAttachments: [{
-                view: engine.context.getCurrentTexture().createView(),
+                view: engine.msaaColorTexture.createView(),
+                resolveTarget: engine.context.getCurrentTexture().createView(),
                 clearValue: { r: 0.0, g: 0.0, b: 0.0, a: 0.0 },
                 loadOp: "clear",
                 storeOp: "store",

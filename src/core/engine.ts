@@ -47,6 +47,7 @@ class Engine {
     device!: GPUDevice;
     context!: GPUCanvasContext;
     format!: GPUTextureFormat;
+    msaaColorTexture!: GPUTexture;
 
     fragmentBuffer!: GPUBuffer;
     fragmentBindGroup!: GPUBindGroup;
@@ -86,6 +87,15 @@ class Engine {
         this.context.configure({
             device: this.device,
             format: this.format
+        });
+
+        const presentationFormat = navigator.gpu.getPreferredCanvasFormat();
+
+        this.msaaColorTexture = this.device.createTexture({
+            size: [this.canvas.width, this.canvas.height],
+            sampleCount: 4,
+            format: presentationFormat,
+            usage: GPUTextureUsage.RENDER_ATTACHMENT,
         });
 
         await pbrPipeline.init();
