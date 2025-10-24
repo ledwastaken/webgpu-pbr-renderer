@@ -3,44 +3,6 @@ import { pbrPipeline } from "../gfx/pbr-pipeline";
 import SkyboxPipeline from "../gfx/skybox-pipeline";
 import { Camera } from "../scene/camera";
 
-async function createTextureFromImages(urls: string[]) {
-    const bitmaps = await Promise.all(urls.map(async url => {
-        return await loadImageBitmap(url);
-    }));
-    return createTextureFromSources(bitmaps);
-}
-
-async function loadImageBitmap(url: string) {
-    const res = await fetch(url);
-    const blob = await res.blob();
-    return await createImageBitmap(blob, { colorSpaceConversion: 'none' });
-}
-
-function createTextureFromSources(sources: ImageBitmap[]) {
-    const source = sources[0];
-    const texture = engine.device.createTexture({
-        format: 'rgba8unorm',
-        size: [source.width, source.height, 6],
-        usage: GPUTextureUsage.TEXTURE_BINDING |
-            GPUTextureUsage.COPY_DST |
-            GPUTextureUsage.RENDER_ATTACHMENT,
-        dimension: '2d',
-        mipLevelCount: 5
-    });
-    copySourcesToTexture(texture, sources);
-    return texture;
-}
-
-function copySourcesToTexture(texture: GPUTexture, sources: Array<ImageBitmap>) {
-    sources.forEach((source, layer) => {
-        engine.device.queue.copyExternalImageToTexture(
-            { source, },
-            { texture, origin: [0, 0, layer] },
-            { width: source.width, height: source.height },
-        );
-    });
-}
-
 let startTime = performance.now();
 
 class Engine {
