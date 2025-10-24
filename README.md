@@ -1,6 +1,11 @@
 # WebGPU PBR Renderer
 
 A physically based rendering (PBR) engine built with TypeScript and WebGPU.
+This project makes use of advanced rendering techniques such as mipmapping and multisampling to enhance image quality and reduce aliasing artifacts.
+
+<video autoplay muted loop playsinline src="https://ledwastaken.github.io/webgpu-pbr-renderer/sample.mp4"></video>
+
+You can view the live demo of the web application here: https://ledwastaken.github.io/webgpu-pbr-renderer/
 
 ## Getting Started
 
