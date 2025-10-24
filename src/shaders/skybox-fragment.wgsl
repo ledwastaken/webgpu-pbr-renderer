@@ -7,7 +7,7 @@ struct FragmentInput {
 
 @fragment
 fn main(input: FragmentInput) -> @location(0) vec4<f32> {
-    let color = textureSampleLevel(skyboxData, skyboxSampler, input.direction, 0).rgb;
+    let color = textureSample(skyboxData, skyboxSampler, input.direction).rgb;
 
     return vec4<f32>(color, 1.0);
 }

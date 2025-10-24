@@ -102,15 +102,126 @@ class Engine {
         await pbrPipeline.init();
         await SkyboxPipeline.init();
 
-        this.skyboxSampler = this.device.createSampler();
-        this.skyboxTexture = await createTextureFromImages([
+        const bitmaps = await Promise.all([
             'texture/skybox/pos-x.jpg',
             'texture/skybox/neg-x.jpg',
             'texture/skybox/pos-y.jpg',
             'texture/skybox/neg-y.jpg',
             'texture/skybox/pos-z.jpg',
             'texture/skybox/neg-z.jpg',
-        ]);
+        ].map(async path => {
+            const response = await fetch(path);
+            const blob = await response.blob();
+            return await createImageBitmap(blob, { colorSpaceConversion: 'none' });
+        }));
+
+        const width = bitmaps[0].width;
+        const height = bitmaps[0].height;
+        const mipLevelCount = Math.floor(Math.log2(Math.max(width, height))) + 1;
+
+        this.skyboxTexture = this.device.createTexture({
+            size: [width, height, 6],
+            mipLevelCount: mipLevelCount,
+            format: 'rgba8unorm',
+            dimension: '2d',
+            usage: GPUTextureUsage.TEXTURE_BINDING |
+                GPUTextureUsage.STORAGE_BINDING |
+                GPUTextureUsage.COPY_DST |
+                GPUTextureUsage.RENDER_ATTACHMENT
+        });
+
+        for (let face = 0; face < 6; face++) {
+            this.device.queue.copyExternalImageToTexture(
+                { source: bitmaps[face], flipY: false },
+                { texture: this.skyboxTexture, mipLevel: 0, origin: [0, 0, face] },
+                [width, height, 1]
+            );
+        }
+
+        this.skyboxSampler = this.device.createSampler();
+
+        const computeShader = this.device.createShaderModule({
+            code: `
+                @group(0) @binding(0) var srcTexture : texture_2d<f32>;
+                @group(0) @binding(1) var dstTexture : texture_storage_2d<rgba8unorm, write>;
+
+                @compute @workgroup_size(8, 8)
+                fn main(@builtin(global_invocation_id) global_id : vec3u) {
+                    let dstSize = textureDimensions(dstTexture);
+                    if (global_id.x >= dstSize.x || global_id.y >= dstSize.y) {
+                        return;
+                    }
+
+                    let srcCoord = vec2i(global_id.xy * 2u);
+
+                    var color = textureLoad(srcTexture, srcCoord, 0);
+                    color += textureLoad(srcTexture, srcCoord + vec2i(1, 0), 0);
+                    color += textureLoad(srcTexture, srcCoord + vec2i(0, 1), 0);
+                    color += textureLoad(srcTexture, srcCoord + vec2i(1, 1), 0);
+                    color /= 4.0;
+
+                    textureStore(dstTexture, vec2i(global_id.xy), color);
+                }
+            `
+        });
+
+        const computePipeline = this.device.createComputePipeline({
+            layout: 'auto',
+            compute: {
+                module: computeShader,
+                entryPoint: 'main',
+            },
+        });
+
+        const commandEncoder = this.device.createCommandEncoder();
+
+        for (let face = 0; face < 6; face++) {
+            let currentWidth = width;
+            let currentHeight = height;
+
+            for (let mipLevel = 1; mipLevel < mipLevelCount; mipLevel++) {
+                currentWidth = Math.max(1, Math.floor(currentWidth / 2));
+                currentHeight = Math.max(1, Math.floor(currentHeight / 2));
+
+                const srcView = this.skyboxTexture.createView({
+                    dimension: '2d',
+                    baseMipLevel: mipLevel - 1,
+                    mipLevelCount: 1,
+                    baseArrayLayer: face,
+                    arrayLayerCount: 1,
+                });
+
+                const dstView = this.skyboxTexture.createView({
+                    dimension: '2d',
+                    baseMipLevel: mipLevel,
+                    mipLevelCount: 1,
+                    baseArrayLayer: face,
+                    arrayLayerCount: 1,
+                });
+
+                const bindGroup = this.device.createBindGroup({
+                    layout: computePipeline.getBindGroupLayout(0),
+                    entries: [
+                        { binding: 0, resource: srcView },
+                        { binding: 1, resource: dstView }
+                    ],
+                });
+
+                const passEncoder = commandEncoder.beginComputePass();
+                passEncoder.setPipeline(computePipeline);
+                passEncoder.setBindGroup(0, bindGroup);
+
+                const workgroupCountX = Math.ceil(currentWidth / 8);
+                const workgroupCountY = Math.ceil(currentHeight / 8);
+
+                passEncoder.dispatchWorkgroups(workgroupCountX, workgroupCountY, 1);
+                passEncoder.end();
+            }
+        }
+
+        this.device.queue.submit([commandEncoder.finish()]);
+        bitmaps.forEach(bitmap => bitmap.close());
+
         this.skyboxBindGroup = this.device.createBindGroup({
             layout: SkyboxPipeline.pipeline.getBindGroupLayout(1),
             entries: [
