@@ -169,8 +169,6 @@ class PBRPipeline {
     }
 }
 
-export let pbrPipeline = new PBRPipeline();
-
 function mat4_rotationY(angle: number): Float32Array {
     const c = Math.cos(angle);
     const s = Math.sin(angle);
@@ -181,3 +179,5 @@ function mat4_rotationY(angle: number): Float32Array {
         0, 0, 0, 1,
     ]);
 }
+
+export default new PBRPipeline();

@@ -1,5 +1,5 @@
 import { Mesh } from "../scene/mesh";
-import { pbrPipeline } from "../gfx/pbr-pipeline";
+import PBRPipeline from "../gfx/pbr-pipeline";
 import SkyboxPipeline from "../gfx/skybox-pipeline";
 import { Camera } from "../scene/camera";
 
@@ -61,7 +61,7 @@ class Engine {
             usage: GPUTextureUsage.RENDER_ATTACHMENT,
         });
 
-        await pbrPipeline.init();
+        await PBRPipeline.init();
         await SkyboxPipeline.init();
 
         const bitmaps = await Promise.all([
@@ -192,7 +192,7 @@ class Engine {
             ],
         });
         this.pbrSkyboxBindGroup = this.device.createBindGroup({
-            layout: pbrPipeline.pipeline.getBindGroupLayout(3),
+            layout: PBRPipeline.pipeline.getBindGroupLayout(3),
             entries: [
                 { binding: 0, resource: this.skyboxSampler },
                 { binding: 1, resource: this.skyboxTexture.createView({ dimension: 'cube' }) },
@@ -204,7 +204,7 @@ class Engine {
             usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
         });
         this.fragmentBindGroup = this.device.createBindGroup({
-            layout: pbrPipeline.pipeline.getBindGroupLayout(1),
+            layout: PBRPipeline.pipeline.getBindGroupLayout(1),
             entries: [{ binding: 0, resource: { buffer: this.fragmentBuffer } }],
         });
     }
@@ -228,7 +228,7 @@ class Engine {
         SkyboxPipeline.draw(commandEncoder, this.skyboxBindGroup, view, proj);
 
         for (let mesh of this.meshes) {
-            pbrPipeline.draw(commandEncoder, mesh, view, proj, this.fragmentBindGroup, this.pbrSkyboxBindGroup);
+            PBRPipeline.draw(commandEncoder, mesh, view, proj, this.fragmentBindGroup, this.pbrSkyboxBindGroup);
         }
 
         this.device.queue.submit([commandEncoder.finish()]);
