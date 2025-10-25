@@ -17,6 +17,8 @@ struct Uniforms {
 @group(2) @binding(1) var albedoData: texture_2d<f32>;
 @group(2) @binding(2) var roughnessSampler: sampler;
 @group(2) @binding(3) var roughnessData: texture_2d<f32>;
+@group(2) @binding(4) var normalSampler: sampler;
+@group(2) @binding(5) var normalData: texture_2d<f32>;
 
 @group(3) @binding(0) var skyboxSampler: sampler;
 @group(3) @binding(1) var skyboxData: texture_cube<f32>;
@@ -66,7 +68,14 @@ fn main(input: FragmentInput) -> @location(0) vec4<f32> {
     let F0 = mix(vec3<f32>(0.04), albedo, metallic);
     let alpha = roughness * roughness;
 
-    let N = normalize(input.normal);
+    let TBN = mat3x3<f32>(
+        input.tangent,
+        input.bitangent,
+        input.normal,
+    );
+    let normalMap = 2 * textureSample(normalData, normalSampler, input.uv).rgb - vec3<f32>(1.0);
+
+    let N = normalize(TBN * normalMap);//normalize(input.normal);
     let V = normalize(camera_pos - input.world_pos);
     let L = normalize(light_pos - input.world_pos);
     let H = normalize(V + L);
