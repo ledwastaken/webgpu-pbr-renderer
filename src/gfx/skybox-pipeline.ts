@@ -1,6 +1,6 @@
 import vertexWGSL from "../shaders/skybox-vertex.wgsl?raw";
 import fragmentWGSL from "../shaders/skybox-fragment.wgsl?raw";
-import { engine } from "../core/engine";
+import Engine from "../core/engine";
 
 class SkyboxPipeline {
     pipeline!: GPURenderPipeline;
@@ -11,14 +11,14 @@ class SkyboxPipeline {
     cubeVertexBuffer!: GPUBuffer;
 
     public async init() {
-        const layout = engine.device.createPipelineLayout({
+        const layout = Engine.device.createPipelineLayout({
             bindGroupLayouts: [
-                engine.device.createBindGroupLayout({
+                Engine.device.createBindGroupLayout({
                     entries: [
                         { binding: 0, visibility: GPUShaderStage.VERTEX, buffer: { type: "uniform" } }
                     ],
                 }),
-                engine.device.createBindGroupLayout({
+                Engine.device.createBindGroupLayout({
                     entries: [
                         { binding: 0, visibility: GPUShaderStage.FRAGMENT, sampler: {} },
                         {
@@ -31,10 +31,10 @@ class SkyboxPipeline {
             ],
         });
 
-        this.pipeline = engine.device.createRenderPipeline({
+        this.pipeline = Engine.device.createRenderPipeline({
             layout,
             vertex: {
-                module: engine.device.createShaderModule({ code: vertexWGSL }),
+                module: Engine.device.createShaderModule({ code: vertexWGSL }),
                 entryPoint: "main",
                 buffers: [
                     {
@@ -46,7 +46,7 @@ class SkyboxPipeline {
                 ],
             },
             fragment: {
-                module: engine.device.createShaderModule({ code: fragmentWGSL }),
+                module: Engine.device.createShaderModule({ code: fragmentWGSL }),
                 entryPoint: "main",
                 targets: [{ format: navigator.gpu.getPreferredCanvasFormat() }],
             },
@@ -105,7 +105,7 @@ class SkyboxPipeline {
             -1, 1, -1, 1,
         ]);
 
-        this.cubeVertexBuffer = engine.device.createBuffer({
+        this.cubeVertexBuffer = Engine.device.createBuffer({
             size: vertices.byteLength,
             usage: GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_DST,
             mappedAtCreation: true,
@@ -114,15 +114,15 @@ class SkyboxPipeline {
         new Float32Array(this.cubeVertexBuffer.getMappedRange()).set(vertices);
         this.cubeVertexBuffer.unmap();
 
-        this.uniformBuffer = engine.device.createBuffer({
+        this.uniformBuffer = Engine.device.createBuffer({
             size: 128,
             usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
         });
-        this.uniformBindGroup = engine.device.createBindGroup({
+        this.uniformBindGroup = Engine.device.createBindGroup({
             layout: this.pipeline.getBindGroupLayout(0),
             entries: [{ binding: 0, resource: { buffer: this.uniformBuffer } }],
         });
-        this.depthTexture = engine.device.createTexture({
+        this.depthTexture = Engine.device.createTexture({
             size: [800, 600],
             sampleCount: 4,
             format: 'depth24plus',
@@ -131,13 +131,13 @@ class SkyboxPipeline {
     }
 
     public async draw(commandEncoder: GPUCommandEncoder, textureBindGroup: GPUBindGroup, view: Float32Array, proj: Float32Array) {
-        engine.device.queue.writeBuffer(this.uniformBuffer, 0, new Float32Array(view));
-        engine.device.queue.writeBuffer(this.uniformBuffer, 64, new Float32Array(proj));
+        Engine.device.queue.writeBuffer(this.uniformBuffer, 0, new Float32Array(view));
+        Engine.device.queue.writeBuffer(this.uniformBuffer, 64, new Float32Array(proj));
 
         const renderPass = commandEncoder.beginRenderPass({
             colorAttachments: [{
-                view: engine.msaaColorTexture.createView(),
-                resolveTarget: engine.context.getCurrentTexture().createView(),
+                view: Engine.msaaColorTexture.createView(),
+                resolveTarget: Engine.context.getCurrentTexture().createView(),
                 clearValue: { r: 0.0, g: 0.0, b: 0.0, a: 0.0 },
                 loadOp: "clear",
                 storeOp: "store",

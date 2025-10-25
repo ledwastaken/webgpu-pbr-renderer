@@ -199,11 +199,11 @@ class Engine {
             ],
         });
 
-        this.fragmentBuffer = engine.device.createBuffer({
+        this.fragmentBuffer = this.device.createBuffer({
             size: Float32Array.BYTES_PER_ELEMENT * 8,
             usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
         });
-        this.fragmentBindGroup = engine.device.createBindGroup({
+        this.fragmentBindGroup = this.device.createBindGroup({
             layout: pbrPipeline.pipeline.getBindGroupLayout(1),
             entries: [{ binding: 0, resource: { buffer: this.fragmentBuffer } }],
         });
@@ -222,7 +222,7 @@ class Engine {
         const proj = mat4_perspective(fov, aspect, near, far);
         const view = mat4_lookAt([x, y, z], [0, 0, 0], [0, 1, 0]);
 
-        engine.device.queue.writeBuffer(this.fragmentBuffer, 0, new Float32Array([x, y, z, 8, 4, 8]));
+        this.device.queue.writeBuffer(this.fragmentBuffer, 0, new Float32Array([x, y, z, 8, 4, 8]));
 
         const commandEncoder = this.device.createCommandEncoder();
         SkyboxPipeline.draw(commandEncoder, this.skyboxBindGroup, view, proj);
@@ -231,7 +231,7 @@ class Engine {
             pbrPipeline.draw(commandEncoder, mesh, view, proj, this.fragmentBindGroup, this.pbrSkyboxBindGroup);
         }
 
-        engine.device.queue.submit([commandEncoder.finish()]);
+        this.device.queue.submit([commandEncoder.finish()]);
         requestAnimationFrame(() => this.loop());
     }
 }
@@ -267,4 +267,4 @@ function mat4_lookAt(eye: number[], center: number[], up: number[]): Float32Arra
     ]);
 }
 
-export let engine = new Engine();
+export default new Engine();

@@ -1,4 +1,4 @@
-import { engine } from "../core/engine";
+import Engine from "../core/engine";
 import vertexWGSL from "../shaders/pbr-vertex.wgsl?raw";
 import fragmentWGSL from "../shaders/pbr-fragment.wgsl?raw";
 import type { Mesh } from "../scene/mesh";
@@ -16,19 +16,19 @@ class PBRPipeline {
     private textureBindGroup!: GPUBindGroup;
 
     public async init() {
-        const layout = engine.device.createPipelineLayout({
+        const layout = Engine.device.createPipelineLayout({
             bindGroupLayouts: [
-                engine.device.createBindGroupLayout({
+                Engine.device.createBindGroupLayout({
                     entries: [
                         { binding: 0, visibility: GPUShaderStage.VERTEX, buffer: { type: "uniform" } }
                     ],
                 }),
-                engine.device.createBindGroupLayout({
+                Engine.device.createBindGroupLayout({
                     entries: [
                         { binding: 0, visibility: GPUShaderStage.FRAGMENT, buffer: { type: "uniform" } }
                     ],
                 }),
-                engine.device.createBindGroupLayout({
+                Engine.device.createBindGroupLayout({
                     entries: [
                         { binding: 0, visibility: GPUShaderStage.FRAGMENT, sampler: {} },
                         { binding: 1, visibility: GPUShaderStage.FRAGMENT, texture: {} },
@@ -36,7 +36,7 @@ class PBRPipeline {
                         { binding: 3, visibility: GPUShaderStage.FRAGMENT, texture: {} },
                     ],
                 }),
-                engine.device.createBindGroupLayout({
+                Engine.device.createBindGroupLayout({
                     entries: [
                         { binding: 0, visibility: GPUShaderStage.FRAGMENT, sampler: {} },
                         {
@@ -49,10 +49,10 @@ class PBRPipeline {
             ],
         });
 
-        this.pipeline = engine.device.createRenderPipeline({
+        this.pipeline = Engine.device.createRenderPipeline({
             layout,
             vertex: {
-                module: engine.device.createShaderModule({ code: vertexWGSL }),
+                module: Engine.device.createShaderModule({ code: vertexWGSL }),
                 entryPoint: "main",
                 buffers: [
                     {
@@ -67,7 +67,7 @@ class PBRPipeline {
                 ],
             },
             fragment: {
-                module: engine.device.createShaderModule({ code: fragmentWGSL }),
+                module: Engine.device.createShaderModule({ code: fragmentWGSL }),
                 entryPoint: "main",
                 targets: [{ format: navigator.gpu.getPreferredCanvasFormat() }],
             },
@@ -82,11 +82,11 @@ class PBRPipeline {
             },
         });
 
-        this.uniformBuffer = engine.device.createBuffer({
+        this.uniformBuffer = Engine.device.createBuffer({
             size: 256,
             usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
         });
-        this.uniformBindGroup = engine.device.createBindGroup({
+        this.uniformBindGroup = Engine.device.createBindGroup({
             layout: this.pipeline.getBindGroupLayout(0),
             entries: [{ binding: 0, resource: { buffer: this.uniformBuffer } }],
         });
@@ -94,7 +94,7 @@ class PBRPipeline {
         [this.roughnessTexture, this.roughnessSampler] = await this.loadTexture("texture/Metal046B_2K-JPG_Roughness.jpg");
         [this.albedoTexture, this.albedoSampler] = await this.loadTexture("texture/Metal046B_2K-JPG_Color.jpg");
 
-        this.textureBindGroup = engine.device.createBindGroup({
+        this.textureBindGroup = Engine.device.createBindGroup({
             layout: this.pipeline.getBindGroupLayout(2),
             entries: [
                 { binding: 0, resource: this.albedoSampler },
@@ -103,7 +103,7 @@ class PBRPipeline {
                 { binding: 3, resource: this.roughnessTexture.createView() },
             ]
         });
-        this.depthTexture = engine.device.createTexture({
+        this.depthTexture = Engine.device.createTexture({
             size: [800, 600],
             sampleCount: 4,
             format: 'depth24plus',
@@ -118,14 +118,14 @@ class PBRPipeline {
         await img.decode();
 
         let imageBitmap = await createImageBitmap(img);
-        let texture = engine.device.createTexture({
+        let texture = Engine.device.createTexture({
             size: [imageBitmap.width, imageBitmap.height, 1],
             format: 'rgba8unorm',
             usage: GPUTextureUsage.TEXTURE_BINDING | GPUTextureUsage.COPY_DST,
         });
-        let sampler = engine.device.createSampler({ magFilter: 'linear', minFilter: 'linear' });
+        let sampler = Engine.device.createSampler({ magFilter: 'linear', minFilter: 'linear' });
 
-        engine.device.queue.copyExternalImageToTexture(
+        Engine.device.queue.copyExternalImageToTexture(
             { source: imageBitmap },
             { texture: texture },
             [imageBitmap.width, imageBitmap.height]
@@ -137,14 +137,14 @@ class PBRPipeline {
     public draw(commandEncoder: GPUCommandEncoder, mesh: Mesh, view: Float32Array, proj: Float32Array, fragmentBindGroup: GPUBindGroup, skyboxBindGroup: GPUBindGroup) {
         const model = mat4_rotationY(0);
 
-        engine.device.queue.writeBuffer(this.uniformBuffer, 0, new Float32Array(model));
-        engine.device.queue.writeBuffer(this.uniformBuffer, 64, new Float32Array(view));
-        engine.device.queue.writeBuffer(this.uniformBuffer, 128, new Float32Array(proj));
+        Engine.device.queue.writeBuffer(this.uniformBuffer, 0, new Float32Array(model));
+        Engine.device.queue.writeBuffer(this.uniformBuffer, 64, new Float32Array(view));
+        Engine.device.queue.writeBuffer(this.uniformBuffer, 128, new Float32Array(proj));
 
         const renderPass = commandEncoder.beginRenderPass({
             colorAttachments: [{
-                view: engine.msaaColorTexture.createView(),
-                resolveTarget: engine.context.getCurrentTexture().createView(),
+                view: Engine.msaaColorTexture.createView(),
+                resolveTarget: Engine.context.getCurrentTexture().createView(),
                 clearValue: { r: 0.0, g: 0.0, b: 0.0, a: 1 },
                 loadOp: "load",
                 storeOp: "store",
