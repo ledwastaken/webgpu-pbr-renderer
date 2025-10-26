@@ -215,7 +215,7 @@ class Engine {
         let y = 1;
         let z = Math.sin(now * 0.0003) * 2;
 
-        const aspect = 800.0 / 600.0;
+        const aspect = this.canvas.width / this.canvas.height;
         const fov = 100 * Math.PI / 180.0;
         const near = 0.1;
         const far = 100;

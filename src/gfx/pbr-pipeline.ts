@@ -111,7 +111,7 @@ class PBRPipeline {
             ]
         });
         this.depthTexture = Engine.device.createTexture({
-            size: [800, 600],
+            size: [Engine.canvas.width, Engine.canvas.height],
             sampleCount: 4,
             format: 'depth24plus',
             usage: GPUTextureUsage.RENDER_ATTACHMENT,
