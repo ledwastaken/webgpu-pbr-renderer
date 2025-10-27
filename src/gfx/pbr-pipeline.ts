@@ -27,7 +27,8 @@ class PBRPipeline {
                 }),
                 Engine.device.createBindGroupLayout({
                     entries: [
-                        { binding: 0, visibility: GPUShaderStage.FRAGMENT, buffer: { type: "uniform" } }
+                        { binding: 0, visibility: GPUShaderStage.FRAGMENT, buffer: { type: "uniform" } },
+                        { binding: 1, visibility: GPUShaderStage.FRAGMENT, buffer: { type: "read-only-storage" } },
                     ],
                 }),
                 Engine.device.createBindGroupLayout({
@@ -95,9 +96,12 @@ class PBRPipeline {
             entries: [{ binding: 0, resource: { buffer: this.uniformBuffer } }],
         });
 
-        [this.roughnessTexture, this.roughnessSampler] = await this.loadTexture("texture/Metal046B_2K-JPG_Roughness.jpg");
-        [this.albedoTexture, this.albedoSampler] = await this.loadTexture("texture/Metal046B_2K-JPG_Color.jpg");
-        [this.normalTexture, this.normalSampler] = await this.loadTexture("texture/Metal046B_2K-JPG_NormalGL.jpg");
+        // [this.roughnessTexture, this.roughnessSampler] = await this.loadTexture("texture/Metal046B_2K-JPG_Roughness.jpg");
+        // [this.albedoTexture, this.albedoSampler] = await this.loadTexture("texture/Metal046B_2K-JPG_Color.jpg");
+        // [this.normalTexture, this.normalSampler] = await this.loadTexture("texture/Metal046B_2K-JPG_NormalGL.jpg");
+        [this.roughnessTexture, this.roughnessSampler] = await this.loadTexture("texture/marble/roughness.jpg");
+        [this.albedoTexture, this.albedoSampler] = await this.loadTexture("texture/marble/color.jpg");
+        [this.normalTexture, this.normalSampler] = await this.loadTexture("texture/marble/normal.jpg");
 
         this.textureBindGroup = Engine.device.createBindGroup({
             layout: this.pipeline.getBindGroupLayout(2),

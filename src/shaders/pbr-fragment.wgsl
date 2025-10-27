@@ -6,12 +6,18 @@ struct FragmentInput {
     @location(4) bitangent : vec3<f32>,
 };
 
+struct Light {
+  position: vec3<f32>,
+  color: vec3<f32>,
+};
+
 struct Uniforms {
     camera_pos: vec3<f32>,
-    light_pos: vec3<f32>,
+    light_count: u32,
 };
 
 @group(1) @binding(0) var<uniform> uniforms: Uniforms;
+@group(1) @binding(1) var<storage, read> lights: array<Light>;
 
 @group(2) @binding(0) var albedoSampler: sampler;
 @group(2) @binding(1) var albedoData: texture_2d<f32>;
@@ -58,12 +64,12 @@ fn F(F0: vec3<f32>, V: vec3<f32>, H: vec3<f32>) -> vec3<f32> {
 fn main(input: FragmentInput) -> @location(0) vec4<f32> {
     const pi = 3.14159265359;
     let camera_pos = uniforms.camera_pos;
-    let light_pos = uniforms.light_pos;
+    let light_pos = uniforms.camera_pos * 5;
     let light_color = vec3<f32>(300.0);
     let albedo = textureSample(albedoData, albedoSampler, input.uv).rgb;
     let roughness = textureSample(roughnessData, roughnessSampler, input.uv).r;
-    let metallic = 1.0;
-    let emissivity = vec3<f32>(0.04);
+    let metallic = 0.0;
+    let emissivity = vec3<f32>(0.0);
 
     let F0 = mix(vec3<f32>(0.04), albedo, metallic);
     let alpha = roughness * roughness;

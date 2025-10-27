@@ -13,6 +13,7 @@ class Engine {
     msaaColorTexture!: GPUTexture;
 
     fragmentBuffer!: GPUBuffer;
+    lightBuffer!: GPUBuffer;
     fragmentBindGroup!: GPUBindGroup;
 
     skyboxTexture!: GPUTexture;
@@ -200,12 +201,19 @@ class Engine {
         });
 
         this.fragmentBuffer = this.device.createBuffer({
-            size: Float32Array.BYTES_PER_ELEMENT * 8,
+            size: Float32Array.BYTES_PER_ELEMENT * 3 + Uint32Array.BYTES_PER_ELEMENT * 1,
             usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
+        });
+        this.lightBuffer = this.device.createBuffer({
+            size: 24 * 4,
+            usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST,
         });
         this.fragmentBindGroup = this.device.createBindGroup({
             layout: PBRPipeline.pipeline.getBindGroupLayout(1),
-            entries: [{ binding: 0, resource: { buffer: this.fragmentBuffer } }],
+            entries: [
+                { binding: 0, resource: { buffer: this.fragmentBuffer } },
+                { binding: 1, resource: { buffer: this.lightBuffer } },
+            ],
         });
     }
 
@@ -222,7 +230,8 @@ class Engine {
         const proj = mat4_perspective(fov, aspect, near, far);
         const view = mat4_lookAt([x, y, z], [0, 0, 0], [0, 1, 0]);
 
-        this.device.queue.writeBuffer(this.fragmentBuffer, 0, new Float32Array([x, y, z, 8, 4, 8]));
+        this.device.queue.writeBuffer(this.fragmentBuffer, 0, new Float32Array([x, y, z]));
+        this.device.queue.writeBuffer(this.fragmentBuffer, 12, new Uint32Array([0]));
 
         const commandEncoder = this.device.createCommandEncoder();
         SkyboxPipeline.draw(commandEncoder, this.skyboxBindGroup, view, proj);
