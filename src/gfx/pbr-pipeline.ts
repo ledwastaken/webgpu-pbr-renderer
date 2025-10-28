@@ -96,12 +96,9 @@ class PBRPipeline {
             entries: [{ binding: 0, resource: { buffer: this.uniformBuffer } }],
         });
 
-        // [this.roughnessTexture, this.roughnessSampler] = await this.loadTexture("texture/Metal046B_2K-JPG_Roughness.jpg");
-        // [this.albedoTexture, this.albedoSampler] = await this.loadTexture("texture/Metal046B_2K-JPG_Color.jpg");
-        // [this.normalTexture, this.normalSampler] = await this.loadTexture("texture/Metal046B_2K-JPG_NormalGL.jpg");
-        [this.roughnessTexture, this.roughnessSampler] = await this.loadTexture("texture/marble/roughness.jpg");
-        [this.albedoTexture, this.albedoSampler] = await this.loadTexture("texture/marble/color.jpg");
-        [this.normalTexture, this.normalSampler] = await this.loadTexture("texture/marble/normal.jpg");
+        [this.roughnessTexture, this.roughnessSampler] = await this.loadTexture("texture/metal/roughness.jpg");
+        [this.albedoTexture, this.albedoSampler] = await this.loadTexture("texture/metal/color.jpg");
+        [this.normalTexture, this.normalSampler] = await this.loadTexture("texture/metal/normal.jpg");
 
         this.textureBindGroup = Engine.device.createBindGroup({
             layout: this.pipeline.getBindGroupLayout(2),

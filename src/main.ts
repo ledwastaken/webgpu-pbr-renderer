@@ -1,5 +1,6 @@
-import Engine from "./core/engine"
-import { Sphere } from "./scene/sphere"
+import Engine from "./core/engine";
+import { Sphere } from "./scene/sphere";
+import { Cube } from "./scene/cube";
 import { Vector3 } from "./types/vector3";
 
 await Engine.init();

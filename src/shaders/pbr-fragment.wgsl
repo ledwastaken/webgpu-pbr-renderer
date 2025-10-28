@@ -68,7 +68,7 @@ fn main(input: FragmentInput) -> @location(0) vec4<f32> {
     let light_color = vec3<f32>(300.0);
     let albedo = textureSample(albedoData, albedoSampler, input.uv).rgb;
     let roughness = textureSample(roughnessData, roughnessSampler, input.uv).r;
-    let metallic = 0.0;
+    let metallic = 1.0;
     let emissivity = vec3<f32>(0.0);
 
     let F0 = mix(vec3<f32>(0.04), albedo, metallic);
