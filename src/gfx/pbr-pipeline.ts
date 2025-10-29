@@ -15,6 +15,8 @@ class PBRPipeline {
     private roughnessTexture!: GPUTexture;
     private normalSampler!: GPUSampler;
     private normalTexture!: GPUTexture;
+    private metalnessSampler!: GPUSampler;
+    private metalnessTexture!: GPUTexture;
     private textureBindGroup!: GPUBindGroup;
 
     public async init() {
@@ -39,6 +41,8 @@ class PBRPipeline {
                         { binding: 3, visibility: GPUShaderStage.FRAGMENT, texture: {} },
                         { binding: 4, visibility: GPUShaderStage.FRAGMENT, sampler: {} },
                         { binding: 5, visibility: GPUShaderStage.FRAGMENT, texture: {} },
+                        { binding: 6, visibility: GPUShaderStage.FRAGMENT, sampler: {} },
+                        { binding: 7, visibility: GPUShaderStage.FRAGMENT, texture: {} },
                     ],
                 }),
                 Engine.device.createBindGroupLayout({
@@ -99,6 +103,7 @@ class PBRPipeline {
         [this.roughnessTexture, this.roughnessSampler] = await this.loadTexture("texture/metal/roughness.jpg");
         [this.albedoTexture, this.albedoSampler] = await this.loadTexture("texture/metal/color.jpg");
         [this.normalTexture, this.normalSampler] = await this.loadTexture("texture/metal/normal.jpg");
+        [this.metalnessTexture, this.metalnessSampler] = await this.loadTexture("texture/metal/metalness.jpg");
 
         this.textureBindGroup = Engine.device.createBindGroup({
             layout: this.pipeline.getBindGroupLayout(2),
@@ -109,6 +114,8 @@ class PBRPipeline {
                 { binding: 3, resource: this.roughnessTexture.createView() },
                 { binding: 4, resource: this.normalSampler },
                 { binding: 5, resource: this.normalTexture.createView() },
+                { binding: 6, resource: this.metalnessSampler },
+                { binding: 7, resource: this.metalnessTexture.createView() },
             ]
         });
         this.depthTexture = Engine.device.createTexture({

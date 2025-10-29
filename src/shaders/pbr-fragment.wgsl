@@ -25,6 +25,8 @@ struct Uniforms {
 @group(2) @binding(3) var roughnessData: texture_2d<f32>;
 @group(2) @binding(4) var normalSampler: sampler;
 @group(2) @binding(5) var normalData: texture_2d<f32>;
+@group(2) @binding(6) var metalnessSampler: sampler;
+@group(2) @binding(7) var metalnessData: texture_2d<f32>;
 
 @group(3) @binding(0) var skyboxSampler: sampler;
 @group(3) @binding(1) var skyboxData: texture_cube<f32>;
@@ -68,7 +70,7 @@ fn main(input: FragmentInput) -> @location(0) vec4<f32> {
     let light_color = vec3<f32>(300.0);
     let albedo = textureSample(albedoData, albedoSampler, input.uv).rgb;
     let roughness = textureSample(roughnessData, roughnessSampler, input.uv).r;
-    let metallic = 1.0;
+    let metallic = textureSample(metalnessData, metalnessSampler, input.uv).r;
     let emissivity = vec3<f32>(0.0);
 
     let F0 = mix(vec3<f32>(0.04), albedo, metallic);
